@@ -56,97 +56,137 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>A Century of U.S. Earthquakes: Interactive Map of 100 Years of Earthquake Activity (Mw≥4.5)</h1>
+      <h1>History in Motion (tentative)</h1>
       <div class="meta">
-        <div><span class="badge">Group&nbsp;7</span> Dongting Cai, Albab Newaz, Chiu-Chiu (Jojo) Lin, Conner Houghtby</div>
-        <div><span class="badge">Course</span> DSC 209R, Project 3 </div>
+        <div><span class="badge">DSC 209R</span> &nbsp; Final Project </div>
+      </div>
+      <div class="meta">
+        <div><span class="badge">A Team</span> &nbsp; Dongting Cai, Chiu-Chiu (Jojo) Lin, Albab Newaz</div>
       </div>
     </header>
 
     <section class="panel">
-      <h2>Key Question</h2>
+      <h2>Project Description</h2>
       <p>
-        “What are the patterns in the frequency and magnitude of earthquakes across different
-        regions of the United States over the past 100 years? (Mw≥4.5)”
+          This final project extends our previous
+          <a href="https://caidongting0823.github.io/DSC209R-FA25-Project3-Group7/final.html">
+              Project 3 (US 100yrs Earthquakes Visualization)</a>
+          by shifting focus to a narrative-driven exploration of major historical earthquake(s)
+          (# depending on time) in the United States.
+          The current plan is to showcase either the 1989 Loma Prieta earthquake or the 1994 Northridge earthquake,
+          presenting it as a chronological account of seismic events.
+          <br><br>
+          Users will be able to watch the chosen earthquake unfold along a timeline with synchronized maps,
+          charts, and embedded historical media. The interface will support an autoplay (like the “roll play mode”
+          from Project 3) that plays through the event from foreshocks to main shock to aftershocks, as well as manual
+          navigation for users who wish to explore at their own pace. The experience will highlight the temporal
+          progression and spatial patterns of the seismic activity – for example, illustrating how shock waves
+          propagate and how aftershocks cluster over time. Our goal is to deepen user engagement and understanding of
+          how a major earthquake unfolds, connecting raw seismic data to a compelling historical narrative.
+          <br><br>
+          This final project is inspired by the
+          <a href="https://mbtaviz.github.io/">MBTA subway visualization</a> and
+          <a href="http://worrydream.com/">Explorable Explanations</a>.
       </p>
-      <h2>Project Goal (Final Submission)</h2>
-      <p>
-        Build an interactive <strong>D3.js</strong> map of U.S. earthquakes over the past 100 years
-        (including Alaska, Hawaii & Puerto Rico/USVI). Each quake is a dot: <em>larger</em> for higher magnitude and
-        <em>darker</em> for greater intensity. Hover tooltips reveal details. Users can filter by magnitude
-        and by region (states or broader zones).
-      </p>
-      <div class="callout">
-        <strong>Checkpoint Note:</strong> Plots below are quick generated using Python Package (acceptable for the checkpoint). The
-        final interactive will be D3-only.
-      </div>
     </section>
 
     <section class="panel">
       <h2>Dataset</h2>
       <ul class="list-tight">
         <li><strong>Source:</strong> USGS ANSS ComCat Earthquake Catalog:
-            Using <a href="https://earthquake.usgs.gov/fdsnws/event/1/#:~:text=API%20Documentation%20">USGS API</a></li>
-        <li><strong>Time range:</strong> 100 years (January 1, 1925 - November 2, 2025)</li>
-        <li><strong>Region:</strong> United States, including Alaska, Hawaii, Puerto Rico, and the US Virgin Islands</li>
-        <li><strong>Checkpoint subset:</strong> <span class="badge">M ≥ 4.5</span> </li>
-        <li><strong>Fields used:</strong> time, latitude, longitude, magnitude, depth, place, region</li>
-          <li><strong>Data Insights:</strong> 11,859 earthquakes recorded in the filtered dataset (M≥4.5) over the past century.</li>
-        <li><strong>Filtered Dataset:
-        </strong> <a href="us_earthquakes_m4.5_complete.csv" download="us_earthquakes_m4.5_complete.csv">Download Here</a>
+            Using <a href="https://earthquake.usgs.gov/fdsnws/event/1/#:~:text=API%20Documentation%20">USGS API</a>
+        </li>
+        <li><strong>
+            Data Insights:</strong> 11,859 earthquakes recorded in the filtered dataset (M≥4.5) over the past century
+        </li>
+        <li><strong>Filtered Dataset:</strong>
+            <a href="../dataset/us_earthquakes_m4.5_cleaned.csv" download="us_earthquakes_m4.5_cleaned.csv">Download Here</a>
         </li>
       </ul>
+
+      <div class="callout">
+          <strong>Note: </strong> We will use the <strong>same dataset from Project 3 at the developing stage</strong>,
+          but using earthquake data within a chosen time window. Depending on the performance and visual design,
+          <strong>we might use an expanded dataset, </strong> which we will try to apply to ALL
+          (or a subset with a lower-magnitude limit)
+          earthquake events in this time interval, providing a rich timeline of seismic activity for the target
+          event and its context. This will not hurt the data structure since the added data has the same format.
+      </div>
+
     </section>
 
 
     <section class="panel">
-      <h2>Exploratory Graphs (for Checkpoint)</h2>
+      <h2>Exploratory Graphs (for Proposal)</h2>
+
+      <div class="callout">
+        <strong>Checkpoint Note:</strong> Plots below are quick generated using Python Package (acceptable for the checkpoint). The
+        final interactive will be D3-only.
+      </div>
       <div class="grid">
         <figure>
-          <img src="plots/01_annual_counts.png" alt="Annual earthquake counts line chart" />
-          <figcaption><strong>Fig 1.</strong> Annual counts (M≥4.5) — rising long‑run trend, clear spikes.</figcaption>
+          <img src="plots/01_1994_northridge.png" alt="Monthly Earthquake Frequency within ±6 months of the 1994 Northridge Earthquake" />
+          <figcaption><strong>Fig 1.</strong>Monthly Earthquake Frequency within ±6 months of the 1994 Northridge Earthquake</figcaption>
         </figure>
 
         <figure>
-          <img src="plots/02b_annual_by_region_lines.png" alt="Stacked area chart of annual counts by region" />
-          <figcaption><strong>Fig 2.</strong> Counts by region — Alaska dominates; region filters will be essential.</figcaption>
+          <img src="plots/02_1989_loma-prieta.png" alt="Monthly Earthquake Frequency within ±6 months of the 1989 Loma Prieta Earthquake" />
+          <figcaption><strong>Fig 2.</strong>Monthly Earthquake Frequency within ±6 months of the 1989 Loma Prieta Earthquake</figcaption>
         </figure>
 
         <figure>
-          <img src="plots/03_magnitude_hist.png" alt="Histogram of magnitudes" />
-          <figcaption><strong>Fig 3.</strong> Magnitude distribution — heavy right‑skew; big events are rare.</figcaption>
+          <img src="plots/03_annual_counts.png" alt="Annual earthquake counts line chart" />
+          <figcaption><strong>Fig 3.</strong>  US Earthquake Annual counts (M≥4.5, 1925-2025)</figcaption>
         </figure>
 
         <figure>
-          <img src="plots/04_depth_by_region_box.png" alt="Boxplot of depth by region" />
-          <figcaption><strong>Fig 4.</strong> Depth by region — Alaska deeper overall; others mostly shallow.</figcaption>
+          <img src="plots/04_top10_earthquake.png" alt="Top 10 Largest Earthquakes" />
+          <figcaption><strong>Fig 4.</strong> Top 10 Largest US Earthquakes (1925-2025)</figcaption>
         </figure>
 
         <figure>
           <img src="plots/05_spatial_hexbin.png" alt="Hexbin density of epicenters by lon/lat" />
-          <figcaption><strong>Fig 5.</strong> Spatial density — West Coast &amp; Aleutians are clear hot spots.</figcaption>
+          <figcaption><strong>Fig 5.</strong> US Earthquakes Spatial density (M≥4.5, 1925-2025)</figcaption>
         </figure>
       </div>
     </section>
 
-    <section class="panel">
-      <h2>Fig 6. Interactive Preview</h2>
-      <p>A Preview of Plotly, it's still early-stage map & data and has not been transformed yet.</p>
-      <div class="iframe-box">
-        <iframe src="plots/06_epicenter_map_interactive.html" title="Interactive epicenter map"></iframe>
-      </div>
-      <p style="margin-top:8px">
-        Direct link: <a href="plots/06_epicenter_map_interactive.html">open the interactive map</a>.
-      </p>
-    </section>
 
     <section class="panel">
-      <h2>Planned Interactions (Final D3.js)</h2>
+      <h2>Proposed Visualizations & Story Elements in Detail</h2>
       <ul class="list-tight">
-        <li>Circle <strong>size</strong> ∝ magnitude; circle <strong>color</strong> encodes intensity.</li>
-        <li><strong>Hover tooltips</strong>: magnitude, place, date, depth.</li>
-        <li><strong>Filters</strong>: magnitude range slider; region picker (states &amp; zones).</li>
-        <li>Optional zoom/pan and a size/color <strong>legend</strong>.</li>
+        <li><strong>Timeline-Based Story Mode:</strong>
+            A play-by-play timeline of the earthquake event, from any foreshocks through the main shock and
+            subsequent aftershocks. This timeline can autoplay the sequence of events or allow users to scrub
+            through time manually, providing a clear chronological narrative of the earthquake’s progression.
+        </li>
+        <li><strong>Integrated Media and Annotations:</strong>
+            Contextual media (such as historical photographs, news footage, or diagrams) will be embedded alongside
+            the visualization. As the timeline progresses, relevant images, video clips, and text annotations will
+            appear, giving users historical perspective and explanations (e.g. damage scenes, notable reactions)
+            that enrich the data with storytelling.
+        </li>
+        <li><strong>Seismic Waveform & Impact Visualization:</strong>
+            Additional graphics will illustrate patterns in the earthquake’s seismic data and impacts.
+            For example, a simple waveform or shaking-intensity chart could run in parallel with the timeline,
+            showing the intensity of the tremors over time. This element will help highlight how the main shock’s
+            energy was released and how it was recorded or felt at various locations.
+        </li>
+        <li><strong>User Controls and Navigation:</strong>
+            The interface will include user-friendly controls to toggle between an automated “play” mode and a
+            manual exploration mode. Users can pause, rewind, or jump to specific story milestones
+            (e.g. the moment of the main shock or a significant aftershock). We also plan to include toggle options
+            to switch between viewing aggregate patterns (clustering of events) and individual event details,
+            giving both a macro and micro perspective of the earthquake sequence.
+        </li>
+        <li><span class="badge">Project 3 Integration</span> <strong> Improvements of “Story Mode”: </strong>
+            Display major earthquake groups on a map, provide a direct review (since there has been no response yet),
+            and allow users to click on the group to learn more about the relevant earthquake event. After clicking on
+            a group of earthquakes, the map will zoom in to show only the relevant earthquake event. Each earthquake
+            event within the group will still be interactive and display information. Additionally, a sub-page will
+            pop up on the slide showing the event details. This will be integrated and linked to our final project page.
+        </li>
+
       </ul>
     </section>
 
