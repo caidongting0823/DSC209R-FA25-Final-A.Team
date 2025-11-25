@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>History in Motion – 1989 Loma Prieta Earthquake</title>
+  <!-- D3.js and TopoJSON libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <style>
+    /* Color palette and base styles (inspired by project proposal) */
+    :root {
+      --bg: #0b1020;          /* page background (dark navy) */
+      --panel: #11182e;       /* panel background (slightly lighter navy) */
+      --ink: #e6ebff;         /* primary text (light bluish-white) */
+      --muted: #9fb2ff;       /* secondary text / muted (desaturated light blue) */
+      --accent: #7aa2ff;      /* accent color (medium light blue) */
+      --accent2: #a3ffcd;     /* second accent (soft green) */
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    /* Layout: two-column scrollytelling (text left, map right) */
+    .scrolly-container {
+      display: flex;
+      position: relative;
+      height: 100%;
+      /* The container will scroll as tall as all sections combined */
+    }
+    .text-panel {
+      width: 35%;
+      min-width: 300px;
+      padding: 0;  /* no extra padding, sections handle their own */
+    }
+    .map-panel {
+      width: 65%;
+      position: sticky;
+      top: 0;
+      height: 100vh;   /* occupy full viewport height, stays fixed during scroll */
+      background: var(--bg);
+      /* position: relative to contain absolutely positioned controls */
+      position: sticky;
+      top: 0;
+      overflow: hidden;
+    }
+    /* Chapter sections styling */
+    .chapter {
+      height: 100vh;              /* each chapter takes full viewport height */
+      padding: 15vh 5vw 10vh 5vw; /* top/bottom padding for spacing, side padding for text */
+      box-sizing: border-box;
+    }
+    .chapter h2 {
+      font-size: 2rem;
+      margin: 0 0 1em;
+    }
+    .chapter p {
+      font-size: 1rem;
+      margin: 0 0 1.5em;
+      max-width: 600px;
+    }
+    /* Media placeholder (for future images/videos with captions) */
+    .chapter figure {
+      margin: 0;
+      max-width: 600px;
+      /* Placeholder box with dashed border to indicate media area */
+      background: #0d1326;
+      border: 1px dashed rgba(163, 255, 205, 0.35); /* accent2 color dashed border */
+      border-radius: 8px;
+      padding: 0;
+    }
+    .chapter figure .media-placeholder-box {
+      width: 100%;
+      aspect-ratio: 16/9;  /* maintain 16:9 aspect ratio for media */
+      background: #0d1326;
+    }
+    .chapter figcaption {
+      font-size: 0.9rem;
+      color: var(--muted);
+      padding: 8px 10px;
+    }
+    /* Map SVG and geographical features */
+    #mapSvg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: var(--bg);  /* ensure map background matches page background */
+    }
+    /* State boundaries style: fill slightly lighter than background, thin accent outline */
+    path.state {
+      fill: var(--panel);
+      stroke: rgba(122,162,255, 0.2);  /* accent color with 20% opacity for subtle borders */
+      stroke-width: 1px;
+    }
+    /* Earthquake circles */
+    circle.quake {
+      fill: var(--accent);
+      fill-opacity: 0.8;
+    }
+    circle.mainshock {
+      fill: var(--accent2);
+      stroke: #fff;
+      stroke-width: 1px;
+      fill-opacity: 0.9;
+    }
+    /* Timeline controls (slider and play button) */
+    .timeline-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      pointer-events: auto; /* allow interaction */
+    }
+    .timeline-controls button {
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font-size: 16px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .timeline-controls button:focus {
+      outline: none;
+    }
+    /* Style the range slider track and thumb for consistent appearance */
+    .timeline-controls input[type="range"] {
+      -webkit-appearance: none;
+      width: 80%;
+      height: 4px;
+      background: var(--muted);
+      cursor: pointer;
+      margin: 0;
+    }
+    .timeline-controls input[type="range"]:focus {
+      outline: none;
+    }
+    .timeline-controls input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e6ebff;            /* light knob (same as --ink) */
+      border: 2px solid var(--accent); /* accent-colored outline */
+      margin-top: -6px;               /* center the thumb on the track */
+      cursor: pointer;
+    }
+    .timeline-controls input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e6ebff;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="scrolly-container">
+    <!-- Textual story panels -->
+    <div class="text-panel">
+      <section id="foreshocks" class="chapter">
+        <h2>Foreshocks</h2>
+        <p>In the months leading up to the Loma Prieta earthquake, several smaller tremors rattled the region. These foreshocks were subtle warnings of the stress building along the San Andreas Fault.</p>
+        <figure>
+          <div class="media-placeholder-box"></div>
+          <figcaption>Placeholder for foreshock-related media or annotations.</figcaption>
+        </figure>
+      </section>
+      <section id="mainshock" class="chapter">
+        <h2>Main Shock</h2>
+        <p>On October 17, 1989, the Loma Prieta earthquake struck with a magnitude of 6.9. The main shock caused significant shaking in the San Francisco and Monterey Bay areas, collapsing freeways and buildings.</p>
+        <figure>
+          <div class="media-placeholder-box"></div>
+          <figcaption>Placeholder for main shock media (e.g., a photo of damage or a seismograph).</figcaption>
+        </figure>
+      </section>
+      <section id="aftershocks" class="chapter">
+        <h2>Aftershocks</h2>
+        <p>In the hours and days following the main event, numerous aftershocks rippled through the region. While smaller than the mainshock, these quakes kept residents on edge as the ground continued to move.</p>
+        <figure>
+          <div class="media-placeholder-box"></div>
+          <figcaption>Placeholder for aftershocks media or charts.</figcaption>
+        </figure>
+      </section>
+      <section id="rebuilding" class="chapter">
+        <h2>Rebuilding</h2>
+        <p>Once the seismic activity settled, attention turned to recovery and rebuilding. The Loma Prieta earthquake led to improved building codes and a greater awareness of earthquake preparedness in California.</p>
+        <figure>
+          <div class="media-placeholder-box"></div>
+          <figcaption>Placeholder for rebuilding-era media (e.g., reconstruction photos).</figcaption>
+        </figure>
+      </section>
+    </div>
+    <!-- Map panel (fixed/sticky) -->
+    <div id="map-panel" class="map-panel">
+      <svg id="mapSvg"></svg>
+      <div class="timeline-controls">
+        <button id="playPause" title="Play/Pause Timeline">▶</button>
+        <input id="timeSlider" type="range" min="0" step="1" value="0" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // --- Data and Map Setup ---
+  const width = document.getElementById('map-panel').clientWidth;
+  const height = document.getElementById('map-panel').clientHeight;
+  const svg = d3.select("#mapSvg");
+  const projection = d3.geoAlbersUsa();  // Albers USA projection (includes AK, HI)
+  const path = d3.geoPath(projection);
+
+  // Load US map geometry (TopoJSON for states)
+  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(function(usData) {
+    // Convert TopoJSON to GeoJSON features
+    const states = topojson.feature(usData, usData.objects.states).features;
+    // Fit projection to the US outline
+    projection.fitSize([width, height], topojson.feature(usData, usData.objects.states));
+    // Draw state boundaries
+    svg.selectAll("path.state")
+       .data(states)
+       .enter().append("path")
+         .attr("class", "state")
+         .attr("d", path);
+
+    // Load earthquake data (CSV)
+    d3.csv("data/us_earthquakes_m4.5_cleaned.csv").then(function(data) {
+      // Parse date strings and filter data to ±6 months around 1989-10-17
+      const parseTime = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ");  // parse UTC ISO timestamps
+      const mainshockDate = new Date(Date.UTC(1989, 9, 17));   // Oct 17, 1989 (month index 9)
+      // Define start and end of the window (±6 months)
+      const startDate = new Date(Date.UTC(1989, 3, 17));       // Apr 17, 1989
+      const endDate   = new Date(Date.UTC(1990, 3, 17));       // Apr 17, 1990
+      // Filter to events in time window and in the contiguous US (exclude AK/HI/PR for focus)
+      const events = data.map(d => {
+        d.time = parseTime(d.time);
+        d.latitude = +d.latitude;
+        d.longitude = +d.longitude;
+        d.mag = +d.mag;
+        return d;
+      }).filter(d => d.time >= startDate && d.time <= endDate && d.region === "Conterminous US");
+      events.sort((a, b) => d3.ascending(a.time, b.time));  // sort events chronologically
+
+      // Determine main shock event (Loma Prieta) from data
+      const mainEvent = events.find(d => d.place && d.place.includes("Loma Prieta"));
+      // Compute slider range in days
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const totalDays = Math.round((endDate - startDate) / msPerDay);  // number of days in range (approx 365)
+      const slider = document.getElementById('timeSlider');
+      slider.max = totalDays;
+      // If we found the mainshock in data, set an index for it
+      let mainshockIndex = 0;
+      if (mainEvent) {
+        mainshockIndex = Math.floor((mainEvent.time - startDate) / msPerDay);
+      }
+
+      // Create circles for all filtered events (initially hidden)
+      const circles = svg.selectAll("circle.quake")
+        .data(events)
+        .enter().append("circle")
+          .attr("class", d => {
+            // Mark the mainshock with a special class if matches by place or magnitude
+            if (mainEvent && d === mainEvent) return "quake mainshock";
+            return "quake";
+          })
+          .attr("cx", d => projection([d.longitude, d.latitude])[0] || 0)
+          .attr("cy", d => projection([d.longitude, d.latitude])[1] || 0)
+          .attr("r", d => {
+            // Scale radius by magnitude (simple linear scaling)
+            const minRadius = 2, maxRadius = 10;
+            const mag = d.mag || 5;
+            // Assume mag range roughly 4.5 to 7 in this subset
+            return d === mainEvent ? 8 : d3.scaleLinear().domain([4.5, 7]).range([minRadius, maxRadius])(mag);
+          })
+          .attr("opacity", 0);  // start all points invisible
+
+      // Function to update visible earthquakes based on current day index
+      function updateMapByDay(dayIndex) {
+        const currentTime = new Date(startDate.getTime() + dayIndex * msPerDay);
+        // Show points up to currentTime (inclusive), hide the rest
+        circles.attr("opacity", d => (d.time <= currentTime ? 0.9 : 0));
+      }
+
+      // Initialize map to foreshocks state (just before main shock)
+      updateMapByDay(mainshockIndex > 0 ? mainshockIndex - 1 : 0);
+      slider.value = mainshockIndex > 0 ? mainshockIndex - 1 : 0;
+
+      // --- Slider Controls ---
+      let playing = false;
+      let playInterval = null;
+      const playButton = document.getElementById('playPause');
+
+      // Play/Pause button handler
+      playButton.addEventListener('click', () => {
+        if (!playing) {
+          // Start playback
+          playing = true;
+          playButton.textContent = "⏸";  // change to pause icon
+          // Animate slider forward until the end
+          playInterval = setInterval(() => {
+            let val = Number(slider.value);
+            if (val < Number(slider.max)) {
+              slider.value = val + 1;
+              updateMapByDay(val + 1);
+            } else {
+              // Reached end of timeline
+              clearInterval(playInterval);
+              playing = false;
+              playButton.textContent = "▶";
+            }
+          }, 100);  // advance one day every 100ms (adjust speed as desired)
+        } else {
+          // Pause playback
+          playing = false;
+          playButton.textContent = "▶";
+          clearInterval(playInterval);
+        }
+      });
+
+      // Slider input (drags) - update map continuously
+      slider.addEventListener('input', () => {
+        const dayIndex = Number(slider.value);
+        updateMapByDay(dayIndex);
+        // If user drags slider while playing, we should stop the autoplay
+        if (playing) {
+          playing = false;
+          playButton.textContent = "▶";
+          clearInterval(playInterval);
+        }
+      });
+
+      // --- Scroll-driven Story Logic ---
+      const chapters = document.querySelectorAll('.chapter');
+      const options = { root: null, rootMargin: '0px', threshold: 0.6 };  // trigger when 60% of section is visible
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const sectionId = entry.target.id;
+            // Respond to entering a chapter
+            if (sectionId === 'foreshocks') {
+              // Foreshocks: set timeline to just before main shock (show foreshocks only)
+              slider.value = mainshockIndex > 0 ? mainshockIndex - 1 : 0;
+              updateMapByDay(Number(slider.value));
+            } else if (sectionId === 'mainshock') {
+              // Main Shock: jump slider to mainshock day
+              slider.value = mainshockIndex;
+              updateMapByDay(Number(slider.value));
+            } else if (sectionId === 'aftershocks') {
+              // Aftershocks: start playback automatically (if not already playing)
+              if (!playing) {
+                playButton.textContent = "⏸";
+                playing = true;
+                playInterval = setInterval(() => {
+                  let val = Number(slider.value);
+                  if (val < Number(slider.max)) {
+                    slider.value = val + 1;
+                    updateMapByDay(val + 1);
+                  } else {
+                    clearInterval(playInterval);
+                    playing = false;
+                    playButton.textContent = "▶";
+                  }
+                }, 100);
+              }
+            } else if (sectionId === 'rebuilding') {
+              // Rebuilding: ensure playback is stopped and timeline is at end (all quakes shown)
+              if (playing) {
+                clearInterval(playInterval);
+                playing = false;
+                playButton.textContent = "▶";
+              }
+              slider.value = slider.max;
+              updateMapByDay(Number(slider.max));
+            }
+          }
+        });
+      }, options);
+
+      // Observe each chapter section
+      chapters.forEach(ch => observer.observe(ch));
+    }); // end csv load
+  }); // end map load
+  </script>
+</body>
+</html>
