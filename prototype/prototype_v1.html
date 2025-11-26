@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>D3 US Earthquakes — Stable Map + Multi-select Locations</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://unpkg.com/d3-composite-projections@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+
+<style>
+
+    /* LIGHT THEME (default) */
+    :root{
+      --bg:#ffffff;               /* page background */
+      --text:#111827;             /* primary text */
+      --muted:#6b7280;            /* secondary text */
+      --grid:#e5e7eb;             /* borders/dividers */
+      --accent:#2563eb;           /* blue accent */
+      --panel:#ffffff;            /* cards/inputs/sidebar */
+      --headerH: 94px;
+    }
+
+    /* DARK THEME (optional toggle) */
+    :root[data-theme="dark"]{
+      --bg:#0b0e14;
+      --text:#e8eef7;
+      --muted:#9fb0c6;
+      --grid:#243142;
+      --accent:#1f62d6;
+      --panel:#0f141c;
+    }
+
+    /* Base */
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      overflow:hidden;
+    }
+
+    /* Header */
+    header{
+      height: var(--headerH);
+      display:flex; align-items:flex-start; gap:14px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--grid);
+      background:var(--panel);
+      white-space:normal;           /* allow wrapping */
+      overflow:hidden;
+    }
+    .hdr-left{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    header h1{
+      margin:0;
+      font-size:22px;               /* bigger, punchier */
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.2px;
+      color:var(--text);
+    }
+    header .subtitle{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25;
+    }
+    header .byline{
+      color:var(--muted);
+      font-size:12px;
+    }
+    header .byline a{
+      color:inherit; text-decoration:none; border-bottom:1px dotted #cbd5e1;
+    }
+    header .byline a:hover{ color:var(--text); text-decoration:underline; }
+
+    /* Layout */
+    .layout{
+      position:absolute; inset: var(--headerH) 0 0 0;
+      display:grid; grid-template-columns:340px 1fr; min-height:0;
+    }
+    @media (max-width:900px){ .layout{ grid-template-columns:280px 1fr; } }
+
+    /* Sidebar + controls */
+    .sidebar{
+      border-right:1px solid var(--grid);
+      background:var(--panel);
+      padding:16px 14px; overflow:auto;
+    }
+    .filters{ display:grid; gap:16px; min-width:0 }
+    .section{
+      display:grid; gap:8px; padding-bottom:10px;
+      border-bottom:1px dashed var(--grid);
+    }
+    .section:last-child{ border-bottom:none }
+
+    .row{ display:grid; grid-template-columns:90px 1fr; gap:4px; align-items:center }
+    .label{ color:var(--text); font-size:14px; font-weight:500 }
+    .valuespan{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
+
+    /* Sliders — fix vertical centering + stacking */
+    /* Sliders — perfect centering + correct stacking */
+    .slider2{
+        position:relative;
+        height:32px;                    /* room for 14px thumbs */
+        display:flex;
+        align-items:center;
+        grid-column:1 / span 2;
+    }
+    .slider2 input[type="range"]{
+        -webkit-appearance:none; appearance:none;
+        position:absolute; left:0; right:0; top:50%;
+        transform:translateY(-50%);     /* center the track */
+        width:100%;
+        background:transparent;         /* lower gets gradient via JS */
+        pointer-events:none;            /* only thumbs accept events */
+    }
+
+    /* Track */
+    .slider2 input[type="range"]::-webkit-slider-runnable-track{
+        height:6px; border-radius:999px; background:#e7efff;
+    }
+    .slider2 input[type="range"]::-moz-range-track{
+        height:6px; border-radius:999px; background:#e7efff;
+    }
+
+    /* Thumbs (14px) — nudge up by -(14-6)/2 = -4px to center on a 6px track */
+    .slider2 input[type="range"]::-webkit-slider-thumb{
+        -webkit-appearance:none; appearance:none;
+        width:14px; height:14px; border-radius:50%;
+        background:#fff; border:2px solid var(--accent);
+        margin-top:-4px;                /* exact optical centering */
+        pointer-events:auto;
+    }
+    .slider2 input[type="range"]::-moz-range-thumb{
+        width:14px; height:14px; border-radius:50%;
+        background:#fff; border:2px solid var(--accent);
+        pointer-events:auto;
+    }
+
+    /* Layering: show both thumbs above the painted bar.
+       Make the UPPER track transparent so it never covers the gradient. */
+    .slider2 input.lower{ z-index:3 }
+    .slider2 input.upper{ z-index:4 }  /* upper thumb sits on top */
+    .slider2 input.upper::-webkit-slider-runnable-track{ background:transparent; }
+    .slider2 input.upper::-moz-range-track{ background:transparent; }
+
+    .row.values{ grid-template-columns:1fr }
+    .row.values .label{ display:none }
+    .valuebox{
+      display:grid; grid-template-columns:auto 65px 1fr auto 65px;
+      align-items:center; gap:4px; color:var(--muted); font-size:11.5px;
+    }
+
+    input[type="number"]{
+      background:var(--panel); color:var(--text);
+      border:1px solid var(--grid); border-radius:6px;
+      padding:3px 6px; width:60px; margin-left:5px; text-align:center;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+
+    .checkboxrow{ margin-left:4px }
+    .checkboxrow label{ display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11.5px; margin:0 }
+
+    .info-icon{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        width:16px;
+        height:16px;
+        border-radius:50%;
+        border:1px solid var(--muted);
+        font-size:11px;
+        line-height:1;
+        text-decoration:none;
+        color:var(--muted);
+        margin-left:auto;              /* push icon to the right edge of the row */
+        cursor:pointer;
+    }
+    .info-icon:hover{
+        background:var(--muted);
+        color:var(--panel);
+    }
+
+
+    /* Location search */
+    .locbox{ position:relative; display:grid; gap:8px }
+    .locbox input[type="text"]{
+      width:100%; padding:6px 8px; border-radius:6px;
+      border:1px solid var(--grid); background:var(--panel); color:var(--text); min-width:0;
+    }
+    .helper{ color:var(--muted); font-size:11px }
+
+    .chips{ display:flex; flex-wrap:wrap; gap:6px }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      background:#eef2ff; border:1px solid #c7d2fe; color:var(--text);
+      font-size:12px;
+    }
+    .chip .x{ cursor:pointer; opacity:.7; font-weight:700 }
+    .chip .x:hover{ opacity:1 }
+
+    .loc-suggest{
+      position:absolute; left:0; right:0; top:calc(100% + 4px);
+      background:var(--panel); border:1px solid var(--grid); border-radius:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:240px; overflow-y:auto;
+      z-index:20; display:none;
+    }
+    .loc-item{ padding:6px 8px; font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer }
+    .loc-item small{ color:var(--muted); font-size:11px; margin-left:6px }
+    .loc-item:hover, .loc-item.active{ background:#f3f6fd }
+
+    /* Map area */
+    .view{ position:relative; min-height:0 }
+    svg{ width:100%; height:100%; display:block }
+
+    /* States + borders */
+    .states{ fill:#f7fafc; stroke:#cbd5e1; stroke-width:.6 }
+    .state-borders{ fill:none; stroke:#cbd5e1; stroke-width:.6; pointer-events:none }
+
+    /* Quake dots */
+    .quake{ stroke:#000; stroke-opacity:.25 }
+    .nodata{ fill:#9aa0a6 !important; opacity:.9 }
+
+    /* Legend */
+    .legend-card{
+      fill:rgba(255,255,255,.96);
+      stroke:var(--grid); stroke-width:1;
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.10));
+      rx:auto; ry:auto;
+    }
+    .legend-title{ fill:var(--text); font-weight:600; font-size:12px }
+
+    /* Tooltip */
+    .tooltip{
+      position:absolute; pointer-events:none; opacity:0;
+      background:#ffffff; color:var(--text); border:1px solid var(--grid);
+      padding:8px 10px; font-size:12px; border-radius:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+      transform:none;
+    }
+    .tooltip .tt-grey{ color:var(--muted); }
+
+    /* Buttons */
+    #resetBtn{
+      width:100%; padding:8px 0;
+      background-color:#f3f8ff; color:#1f2937;
+      font-size:13px; font-weight:600;
+      border:1px solid var(--grid); border-radius:6px;
+      cursor:pointer; transition:all .2s ease-in-out;
+    }
+    #resetBtn:hover{ background-color:#e6f0ff }
+    #resetBtn:active{ transform:scale(0.97) }
+
+    #clearLoc{
+      background:var(--panel); color:var(--text);
+      border:1px solid var(--grid); border-radius:6px;
+      padding:4px 8px; cursor:pointer;
+    }
+    #clearLoc:hover{ background:#f3f6fd }
+
+    /* Insets */
+    .inset{ fill:none; stroke:#94a3b8; stroke-width:1; shape-rendering:crispEdges }
+    .inset-label{ fill:var(--muted); font-size:11px; pointer-events:none }
+    .insetBox{ fill:none; stroke:#94a3b8; stroke-width:1; stroke-dasharray:4 3; shape-rendering:crispEdges }
+    .insetTitle{ fill:var(--muted); font-size:12px; font-weight:600 }
+    .nonScaleStroke{ vector-effect:non-scaling-stroke }
+
+    /* Misc */
+    .main-map-mask path{ stroke-width:2 } /* if you ever bring masks back */
+
+    /* Performance hints */
+    #svg, #svg g { will-change: transform; }
+    .quake { shape-rendering: geometricPrecision; }
+
+    /* Discover the Century */
+    .discover { display:grid; gap:8px; }
+    .discover-btn{
+      width:100%; padding:8px 10px;
+      background:#f6f8fe; color:#1f2937;
+      border:1px solid var(--grid); border-radius:8px;
+      font-size:13px; font-weight:600; cursor:pointer;
+      transition:all .15s ease;
+    }
+    .discover-btn:hover{ background:#ecf2ff }
+    .discover-btn:active{ transform:scale(0.98) }
+
+    /* Clickable header for Discover section */
+    .discover-header-btn{
+      background:none;
+      border:none;
+      padding:0;
+      margin:0;
+      font:inherit;
+      text-align:left;
+      cursor:pointer;
+      color:var(--text);
+    }
+    .discover-header-btn:hover{
+      text-decoration:underline;
+    }
+
+    /* Side info panel for Discover the Century */
+    #discoverInfoPanel{
+      position:absolute;
+      right:16px;
+      top:80px;
+      max-width:320px;
+      z-index:30;
+      background:var(--panel);
+      border:1px solid var(--grid);
+      border-radius:12px;
+      padding:12px 14px;
+      box-shadow:0 12px 30px rgba(0,0,0,.16);
+      font-size:12.5px;
+      color:var(--text);
+      display:none;
+    }
+    #discoverInfoPanel.open{
+      display:block;
+    }
+    .side-info-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:6px;
+    }
+    .side-info-title{
+      font-weight:700;
+      font-size:15px;
+    }
+    .side-info-close{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      padding:2px 4px;
+      font-size:14px;
+      color:var(--muted);
+    }
+    .side-info-close:hover{
+      color:var(--text);
+    }
+    .side-info-body p{
+      margin:4px 0;
+    }
+    .side-info-body a{
+      color:var(--accent);
+      text-decoration:none;
+    }
+    .side-info-body a:hover{
+      text-decoration:underline;
+    }
+
+    /* Temporary hide Recent & Significant Discover buttons */
+    #discoverRecent,
+    #discoverSignificant {
+        display: none !important;
+    }
+
+
+    /* Story mode styling */
+    .quake.dimmed{
+      opacity:.06 !important;          /* beats .nodata opacity */
+      fill-opacity:.06 !important;
+      stroke-opacity:.06 !important;
+      pointer-events:none;              /* no tooltip on dimmed dots */
+    }
+
+    .quake.story-hi{
+      opacity:1 !important;
+      fill-opacity:1 !important;
+      stroke:#111;                      /* crisp outline for contrast */
+      stroke-width:2.5px;
+    }
+
+    /* Fancy tooltip layout */
+    .tooltip .tt-title{ font-weight:700; margin-bottom:4px; font-size:12.5px; }
+    .tooltip .tt-sub{ color:var(--muted); margin-left:6px }
+    .tooltip .tt-grid{
+      display:grid; grid-template-columns:auto 1fr;
+      gap:2px 10px; align-items:baseline; margin-top:4px;
+    }
+    .tooltip .tt-grid .k{ color:var(--muted) }
+    .tooltip code{
+      background:#f3f4f6; border-radius:4px; padding:1px 4px;
+    }
+
+    /* --- Modes visibility --- */
+    body[data-mode="full"] .full-only{ display:block; }
+    body[data-mode="discover"] .full-only,
+    body[data-mode="rolling"]  .full-only{ display:none; }
+    body[data-mode="rolling"] #discoverSection { display: none; }
+    body[data-mode="rolling"] #resetSection    { display: none; }
+
+    /* Mode tabs – stacked cards in the sidebar */
+    .mode-tabs{
+      margin:0 0 16px 0;
+      display:grid;
+      gap:10px;
+    }
+
+    .mode-row{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:stretch;
+      gap:8px;
+    }
+
+    .mode-tabs .tab{
+      padding:10px 12px;
+      border:1px solid var(--grid);
+      border-radius:12px;
+      background:#f6f8fe;
+      color:#1f2937;
+      cursor:pointer;
+      font-size:12px;
+      text-align:left;
+      display:grid;
+      gap:4px;
+      transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .1s ease;
+    }
+
+    .mode-tabs .tab:hover{
+      background:#ecf2ff;
+      transform:translateY(-1px);
+    }
+
+    .mode-tabs .tab.active{
+      background:#e6f0ff;
+      border-color:#c7d2fe;
+      box-shadow:0 0 0 1px #c7d2fe;
+    }
+
+    .mode-title{
+      font-weight:700;
+      font-size:15px;
+      letter-spacing:.02em;
+    }
+
+    .mode-desc{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    /* Arrow column to the right of each mode card */
+    .mode-arrow{
+      font-size:11px;
+      color:var(--muted);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      white-space:nowrap;
+    }
+
+    .mode-arrow-icon{
+      font-size:16px;
+      line-height:1;
+    }
+
+    /* Rolling controls */
+    #rollingCtl{
+      position:absolute; left:12px; top:12px; z-index:15; display:none;
+      background:rgba(255,255,255,.96); border:1px solid var(--grid);
+      border-radius:10px; padding:8px 10px; gap:8px; align-items:center;
+      box-shadow:0 8px 24px rgba(0,0,0,.1);
+    }
+    #rollingCtl button{ border:1px solid var(--grid); border-radius:6px; padding:4px 8px; cursor:pointer; }
+    #rollingCtl input[type="range"]{ width:240px; }
+    body[data-mode="rolling"] #rollingCtl{ display:flex; }
+
+    /* Significant-event callout */
+    #callout{
+      position:absolute; right:12px; top:12px; max-width:320px; z-index:16; display:none;
+      background:#fff; border:1px solid var(--grid); border-radius:10px; padding:10px 12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+    }
+    #callout .c-title{ font-weight:700; margin-bottom:4px; }
+    #callout .c-body{ color:var(--muted); font-size:12px; }
+    #callout .c-actions{ margin-top:6px; }
+    #callout .c-actions a{ font-size:12px; text-decoration:none; color:#2563eb; }
+
+    /* Move controls into sidebar panel; hide the old overlay */
+    #rollingCtl{ display:none !important; }
+
+    /* Show the new roll panel only in Rolling; hide Discover in Rolling */
+    .roll-panel{ display:none; }
+    body[data-mode="rolling"] .roll-panel{ display:block; }
+    body[data-mode="rolling"] .discover{ display:none; }
+
+    /* Rolling feed (15 items max) */
+    .roll-feed{
+      margin-top:8px; border:1px solid var(--grid); border-radius:8px; padding:6px 8px;
+      max-height:260px; overflow:auto; background:var(--panel);
+    }
+    .roll-item{
+      display:grid;
+      grid-template-columns: auto auto auto minmax(0, 1fr); /* ← location can shrink */
+      gap:4px 10px; align-items:baseline;
+      padding:6px 0; border-bottom:1px dashed var(--grid);
+      font-size:12.5px;
+    }
+
+    .roll-item:last-child{ border-bottom:none; }
+
+    .roll-item > *{ min-width:0; }
+
+    .roll-item .mag{ font-weight:700; white-space:nowrap; }
+    .roll-item .meta{ color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+    .roll-item .loc{
+      color:var(--muted);
+      justify-self:end; text-align:right;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; min-width:0;
+    }
+    .roll-item .meta{ color:var(--muted); font-variant-numeric:tabular-nums; }
+    .roll-badge{
+      display:inline-block; font-size:11px; padding:1px 6px; border-radius:999px; margin-left:6px;
+      background:#eef2ff; border:1px solid #c7d2fe; color:#1f2937;
+    }
+
+    /* Rolling label interval styling */
+    #rollLabel { font-variant-numeric: tabular-nums; }
+    .roll-lb-start { opacity:.75; font-size:12px; font-weight:500; }
+    .roll-lb-dash  { opacity:.55; margin:0 4px; }
+    .roll-lb-end   { font-weight:800; }
+
+</style>
+
+
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
+    <div class="subtitle">Interactive Map of 100 Years (1925–2025) of Seismic Activity Across America</div>
+    <div class="byline">
+      <b>Group&nbsp;7 ·</b>
+      <a>Dongting&nbsp;Cai (docai@ucsd.edu)</a>,
+      <a>Chiu-Chiu (Jojo) Lin (jol145@ucsd.edu)</a>,
+      <a>Albab&nbsp;Newaz (anewaz@ucsd.edu) </a>
+    </div>
+  </div>
+
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+
+    <div class="mode-tabs">
+
+      <div>
+          <div class="mode-arrow">
+          <span class="mode-arrow-icon">⇩ Click to Switch Mode ⇩</span>
+        </div>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeDiscover" class="tab active">
+          <div class="mode-title">🔍 Discover Mode</div>
+          <div class="mode-desc">
+              <strong>Guided “story” mode.</strong>
+              Discover curated highlights of the century, including Top 10, Deepest, Shallowest.
+          </div>
+        </button>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeRolling" class="tab">
+          <div class="mode-title">🎦️ Rolling Player Mode</div>
+          <div class="mode-desc">
+              <strong>Play the timeline month by month.</strong>
+              The slider and rolling feed show activity in a timeline format.
+          </div>
+        </button>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeFull" class="tab">
+          <div class="mode-title">🗺️ Full Explore Mode</div>
+          <div class="mode-desc">
+              <strong>Full control mode.</strong>
+              Use magnitude, depth, year, and location chips to build custom filters and compare patterns
+              across space and time.
+          </div>
+        </button>
+      </div>
+
+    </div>
+
+    <hr />
+
+    <div class="filters">
+      <div class="section">
+        <div class="row"><div class="label">Magnitude</div><div class="valuespan" id="magVals">—</div></div>
+        <div class="slider2 full-only">
+          <input id="magMinR" class="lower" type="range" step="0.1">
+          <input id="magMaxR" class="upper" type="range" step="0.1">
+        </div>
+        <div class="row values full-only">
+          <div class="valuebox">
+              <span>Min</span><input id="magMinN" type="number" step="0.1"><span></span>
+              <span>Max</span><input id="magMaxN" type="number" step="0.1"></div>
+        </div>
+
+          <div class="checkboxrow">
+          <label>
+            <input id="useMw" type="checkbox" checked>
+            Normalize as Mw (approx)
+            <a
+              href="https://www.usgs.gov/programs/earthquake-hazards/magnitude-types"
+              class="info-icon"
+              target="_blank"
+              rel="noopener"
+              title="USGS: Magnitude Types and Mw explanation"
+            >
+              i
+            </a>
+          </label>
+        </div>
+
+
+        <div class="checkboxrow">
+            <label><input id="hideUnconverted" type="checkbox" checked>Hide non-Mw (Not Convertible) Data</label>
+        </div>
+
+      </div>
+
+      <div class="section">
+        <div class="row"><div class="label">Depth (km)</div><div class="valuespan" id="depthVals">—</div></div>
+        <div class="slider2 full-only">
+          <input id="depthMinR" class="lower" type="range" step="10">
+          <input id="depthMaxR" class="upper" type="range" step="10">
+        </div>
+        <div class="row values full-only">
+          <div class="valuebox"><span>Min</span><input id="depthMinN" type="number" step="10"><span></span><span>Max</span><input id="depthMaxN" type="number" step="10"></div>
+        </div>
+        <div class="checkboxrow"><label><input id="includeNA" type="checkbox" checked> Include N/A</label></div>
+      </div>
+
+      <div class="section">
+        <div class="row"><div class="label">Year</div><div class="valuespan" id="yearVals">—</div></div>
+        <div class="slider2 full-only">
+          <input id="yearMinR" class="lower" type="range" step="1">
+          <input id="yearMaxR" class="upper" type="range" step="1">
+        </div>
+        <div class="row values full-only">
+          <div class="valuebox"><span>Min</span><input id="yearMinN" type="number" step="1"><span></span><span>Max</span><input id="yearMaxN" type="number" step="1"></div>
+        </div>
+      </div>
+
+      <div class="section full-only">
+        <div class="row">
+          <div class="label">Location</div>
+          <div class="valuespan helper">Add cities or States</div>
+        </div>
+        <div class="locbox">
+          <input id="locInput" type="text" placeholder="Type: Los Angeles, CA • CA • California…" autocomplete="off">
+          <div id="chips" class="chips"></div>
+          <div id="locSuggest" class="loc-suggest"></div>
+          <div class="helper">Click to add. Backspace on empty box removes last chip. “Clear” removes all.</div>
+        </div>
+        <div class="row values">
+          <div class="valuebox" style="grid-template-columns:auto auto;">
+            <button id="clearLoc" style="background:#0f141c;color:#e8eef7;border:1px solid var(--grid);border-radius:6px;padding:4px 8px;cursor:pointer;">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section full-only" style="padding-top:4px;">
+        <div class="label" style="opacity:.85;">Note: Click empty map to reset zoom.</div>
+      </div>
+
+      <!-- Rolling Playback (shown only in Rolling mode) -->
+      <div class="section roll-panel">
+        <div class="label" style="display:flex;align-items:center;gap:8px;">
+          Rolling Playback
+          <span id="rollLabel" class="valuespan" style="margin-left:auto">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="rollPlay" title="Play / Pause">▶</button>
+          <input id="rollSlider" type="range" style="width:100%">
+          <button id="rollReplay" title="Replay" style="display:none">⟲</button>
+        </div>
+
+        <!-- Live monthly feed -->
+        <div id="rollFeed" class="roll-feed"></div>
+      </div>
+
+
+      <div class="section" id="discoverSection">
+          <button type="button"
+                  class="label discover-header-btn"
+                  id="discoverIntroBtn">
+            Discover the Century
+          </button>
+          <div class="discover">
+            <button class="discover-btn" id="discoverTop10">Top 10 Earthquakes</button>
+            <button class="discover-btn" id="discoverDeepest">Deepest Earthquake</button>
+            <button class="discover-btn" id="discoverShallowest">Shallowest Earthquake</button>
+            <button class="discover-btn" id="discoverRecent">Most Recent Earthquake</button>
+            <button class="discover-btn" id="discoverSignificant">Significant Earthquakes</button>
+          </div>
+      </div>
+
+      <div class="section" id="resetSection" style="margin-top: 10px;">
+        <button id="resetBtn">🔄 Reset Filters</button>
+      </div>
+
+      <div class="section">
+        <div class="label">Project Document</div>
+        <a class="discover-btn" id="writeupBtn"
+           href="https://caidongting0823.github.io/DSC209R-FA25-Final-A.Team/proposal/final_proposal.html"
+           target="_blank" rel="noopener">
+           🔗 Final Project Proposal
+        </a>
+      </div>
+
+
+    </div>
+  </aside>
+
+  <div class="view">
+    <svg id="svg" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Side info panel for Discover the Century -->
+    <div id="discoverInfoPanel">
+      <div class="side-info-header">
+        <div class="side-info-title">📳 The Shaking Alaska</div>
+        <button class="side-info-close" id="discoverInfoClose" aria-label="Close">✕</button>
+      </div>
+      <div class="side-info-body">
+        <p>
+          <strong>Alaska sits on one of the most powerful plate boundaries on Earth.</strong>
+            Along the Alaska–Aleutian subduction zone,
+            the dense Pacific Plate is constantly pushing northward and diving beneath the North American Plate at a
+            rate of a few centimeters per year. This subduction zone generates an enormous number of earthquakes at
+            all depths, from shallow “megathrust” events on the plate interface to deeper quakes within the sinking
+            slab itself. The Alaska Earthquake Center notes that subduction earthquakes there follow the Pacific Plate
+            down to depths of 200 km or more, and that three of the twelve largest earthquakes ever recorded worldwide
+            occurred in Alaska, including the 1964 Mw 9.2 Good Friday earthquake.
+        </p>
+        <p>
+          Because of this tectonic setting, Alaska completely dominates U.S. earthquake statistics.
+            The Alaska Seismic Hazards Safety Commission reports that Alaska has about 11% of the world’s recorded
+            earthquakes, and seven of the ten largest earthquakes in the United States have occurred in Alaska.
+            The USGS also describes the Alaska–Aleutian subduction system as one of the most seismically active
+            plate boundaries on the planet, producing more magnitude-8 and larger earthquakes over the last century
+            than any other subduction zone.
+            <strong>So if you look at a U.S.-only earthquake catalog for the past 100 years,
+            it’s not surprising that the national top-10 largest events, as well as many of the very deep
+                intermediate-depth quakes, cluster in Alaska.</strong>
+        </p>
+        <p>
+            <strong>At the same time, Alaska also hosts many of the shallowest events in the U.S.</strong>
+            The state has long, active
+            crustal faults like the Denali Fault and numerous faults around its volcanic arcs, which produce earthquakes
+            very close to the surface. In mountainous or offshore areas, when an earthquake is extremely shallow,
+            location uncertainties and the choice of reference surface (sea level vs. the WGS84 geoid) can even lead
+            to catalog depths reported as 0 km or slightly negative. The USGS explains that such negative depths simply
+            reflect how depth is calculated for very shallow events, not that earthquakes actually happen “in the air.”
+            Together, this combination of a deep subducting slab and very active shallow crustal faults explains why,
+            in a 100-year U.S. dataset, Alaska can host both the deepest and the very shallowest
+            (even “negative-depth”) earthquakes.</p>
+        <p>
+          <a href="https://earthquake.alaska.edu/earthquakes/about"
+             target="_blank" rel="noopener">
+            Discover more about why earthquakes happen in Alaska →
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Click-callout for “Significant” story (appears on dot click) -->
+    <div id="callout"></div>
+
+  </div>
+</div>
+
+<script>
+
+const normId = v => String(v).padStart(2, "0");
+
+/* ---------- Modes & Rolling state ---------- */
+document.body.dataset.mode = "discover"; // default landing
+let mode = "discover";
+
+function setActiveTab(which){
+  ["modeDiscover","modeRolling","modeFull"].forEach(id=>{
+    const b = document.getElementById(id);
+    if (b) b.classList.toggle("active", id === which);
+  });
+}
+
+function setMode(m){
+  if (m === mode) return;
+
+  const infoPanel = document.getElementById("discoverInfoPanel");
+  if (infoPanel) infoPanel.classList.remove("open");
+
+  mode = m;
+  document.body.dataset.mode = (m === "full" ? "full" : m);
+  setActiveTab(
+    m === "discover" ? "modeDiscover" :
+    m === "rolling"  ? "modeRolling"  :
+                       "modeFull"
+  );
+
+  if (window.clearStory) window.clearStory();
+  hideCallout();
+
+  if (m === "discover"){
+    resetRollingState();
+    if (window.applyStory) window.applyStory("top10", { syncUI:false });
+  } else if (m === "rolling"){
+    initRollingUI();
+    stopRolling();
+  } else if (m === "full"){
+    stopRolling();
+    requestRepaint();
+  }
+}
+
+// --- Month helpers ---
+function monthIndexFromMs(ms){
+  const d = new Date(ms);
+  return d.getUTCFullYear()*12 + d.getUTCMonth(); // integer month index
+}
+function msFromMonthIndex(mi){
+  const y = Math.floor(mi/12), m = mi % 12;
+  return Date.UTC(y, m, 1); // first day of that month (UTC)
+}
+
+function monthStr(mi){ return new Date(msFromMonthIndex(mi)).toISOString().slice(0,7); }
+
+/* Show [start..end] where end = rollingMon and start = max(minMonth, end-5) */
+function updateRollLabel(){
+  const el = document.getElementById("rollLabel");
+  if (!el) return;
+
+  // Guard if not initialized yet
+  const end = Number.isFinite(rollingMon) ? rollingMon
+            : (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0]) ? tsMonthExt[0] : null);
+  if (!Number.isFinite(end)){ el.textContent = "—"; return; }
+
+  const minM = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) ? tsMonthExt[0] : end;
+  const start = Math.max(minM, end - 5);
+
+  el.innerHTML = `
+    <span class="roll-lb-start">${monthStr(start)}</span>
+    <span class="roll-lb-dash">to</span>
+    <span class="roll-lb-end">${monthStr(end)}</span>
+  `;
+}
+
+
+/* ---------- Rolling animation ---------- */
+const dayMs = 24*3600*1000;
+const ROLL_STEP_MONTHS = 1;
+const ROLL_INTERVAL_MS = 50;
+
+let tsExt = [null, null];         // (keep; still computed)
+let tsMonthExt = [null, null];    // NEW: [minMonthIdx, maxMonthIdx]
+let rollingMon = null;            // NEW: current month index (integer)
+let rollingNow = null;            // keep var name around; we’ll no longer rely on it
+let rollTimer = null;
+
+function initRollingUI(){
+  const s = document.getElementById("rollSlider");
+
+  // Prefer computed month extent; if not ready, fallback from year sliders
+  let m0 = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) ? tsMonthExt[0] : null;
+  let m1 = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[1])) ? tsMonthExt[1] : null;
+
+  if (!m0 || !m1){
+    const yrMinEl = document.getElementById("yearMinR");
+    const yrMaxEl = document.getElementById("yearMaxR");
+    const y0 = +(yrMinEl?.min || yrMinEl?.value || 1925);
+    const y1 = +(yrMaxEl?.max || yrMaxEl?.value || 2025);
+    m0 = y0*12;           // Jan y0
+    m1 = y1*12 + 11;      // Dec y1
+    tsMonthExt = [m0, m1];
+  }
+
+  rollingMon = m0;
+
+  // Slider in month indices
+  s.min = m0; s.max = m1; s.step = 1; s.value = rollingMon;
+
+  // Label as YYYY-MM
+  document.getElementById("rollLabel").textContent =
+    new Date(msFromMonthIndex(rollingMon)).toISOString().slice(0,7);
+
+  document.getElementById("rollPlay").textContent = "▶"; // paused
+  document.getElementById("rollReplay").style.display = "none"; // <— add
+
+  updateRollLabel();
+  updateRollingFeed();
+  requestRepaint();
+}
+
+function tickRolling(){
+  rollingMon = Math.min(rollingMon + ROLL_STEP_MONTHS, tsMonthExt[1]);
+  const s = document.getElementById("rollSlider");
+  s.value = rollingMon;
+  updateRollLabel();
+  requestRepaint();
+  if (rollingMon >= tsMonthExt[1]) {
+    stopRolling();
+    document.getElementById("rollReplay").style.display = "inline-block";
+  }
+}
+
+function startRolling(){
+  if (!rollTimer){
+    rollTimer = setInterval(tickRolling, ROLL_INTERVAL_MS);
+    document.getElementById("rollPlay").textContent = "⏸";
+  }
+}
+
+function stopRolling(){
+    if (rollTimer){ clearInterval(rollTimer);
+        rollTimer = null;
+        document.getElementById("rollPlay").textContent = "▶";
+    }
+}
+
+function resetRollingState(){
+  // stop timer + put UI back to a paused, hidden-feed baseline
+  stopRolling();
+  // reset the month pointer to the first month in the data (if known)
+  if (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) {
+    rollingMon = tsMonthExt[0];
+  }
+  // sync the slider + label + feed
+  const s = document.getElementById("rollSlider");
+  if (s && Number.isFinite(rollingMon)) s.value = rollingMon;
+  document.getElementById("rollReplay").style.display = "none";
+  updateRollLabel();
+  updateRollingFeed();  // this clears the list when not in rolling mode
+  // ask for a repaint so alpha logic re-computes with isRolling()===false
+  requestRepaint();
+}
+
+function replayRolling(){
+  if (!Array.isArray(tsMonthExt) || !Number.isFinite(tsMonthExt[0])) return;
+  rollingMon = tsMonthExt[0];
+  const s = document.getElementById("rollSlider");
+  s.value = rollingMon;
+  document.getElementById("rollLabel").textContent =
+    new Date(msFromMonthIndex(rollingMon)).toISOString().slice(0,7);
+  document.getElementById("rollReplay").style.display = "none";
+  updateRollLabel();
+  requestRepaint();
+  startRolling();
+}
+
+function isRolling() {
+    return document.body.dataset.mode === "rolling";
+}
+
+function rollingAlpha(d){
+  if (!isRolling()) return 1;
+  if (!Number.isFinite(d.tsMonth)) return 0;
+
+  const dm = rollingMon - d.tsMonth;  // months since event (integer)
+  if (dm < 0) return 0;               // future
+  if (dm < 1) return 1.00;            // current month (brightest)
+  if (dm < 2) return 0.80;            // +1 month
+  if (dm < 3) return 0.55;            // +2
+  if (dm < 4) return 0.36;            // +3
+  if (dm < 5) return 0.22;            // +4
+  if (dm < 6) return 0.10;            // +5
+  return 0;                           // +6 or older → gone
+}
+
+function buildRollingFeedItems(){
+  if (!isRolling()) return [];
+  // include current + last 5 months (the same visibility window we draw)
+  const items = (window.points || []).filter(d =>
+    Number.isFinite(d.tsMonth) &&
+    d.tsMonth <= rollingMon &&
+    (rollingMon - d.tsMonth) < 6 &&
+    passesFilters(d) &&
+    (document.getElementById("hideUnconverted").checked ? d._canMw : true)
+  );
+
+  // sort most recent first (month then timestamp)
+  items.sort((a,b) => (b.tsMonth - a.tsMonth) || (b.ts - a.ts));
+  return items.slice(0, 15);
+}
+
+function formatMagForList(d){
+  const useMw = document.getElementById("useMw").checked;
+  if (useMw && d._canMw){
+    return d._converted ? `Mw ${d.magMw.toFixed(1)}*` : `Mw ${d.magMw.toFixed(1)}`;
+  } else {
+    // original reported scale
+    const mt = (d.magTypeOrig ? String(d.magTypeOrig).trim().toUpperCase() : (d.magType||""));
+    const short = magTypeShort(mt);
+    return d.mag != null ? `${short} ${d.mag.toFixed(1)}**` : "M?";
+  }
+}
+
+function monthBadge(d){
+  const dm = rollingMon - d.tsMonth;
+  if (dm < 1) return "Now";
+  return `-${Math.floor(dm)}m`;
+}
+
+function updateRollingFeed(){
+  const feed = document.getElementById("rollFeed");
+  if (!feed) return;
+  if (!isRolling()){ feed.innerHTML = ""; return; }
+
+  const rows = buildRollingFeedItems().map(d => {
+    const mag   = formatMagForList(d);
+    const depth = (d.depth==null) ? "N/A" : `${Math.round(d.depth)} km`;
+    const loc   = d.locLabel || d.place || d.region || "Location";
+    const badge = monthBadge(d); // "Now", "-1m", ...
+
+    return `
+      <div class="roll-item" data-key="${d._key||""}">
+        <div class="time"><span class="roll-badge">${badge}</span></div>
+        <div class="mag">${mag}</div>
+        <div class="meta">${depth}</div>
+        <div class="loc" title="${(d.place||"").replace(/"/g,'&quot;')}">${loc}</div>
+      </div>
+    `;
+  }).join("");
+
+  feed.innerHTML = rows || `<div class="valuespan" style="padding:6px 0;">No events in view.</div>`;
+}
+
+
+/* ---------- Significant events (editable list) ---------- */
+// Add/edit entries without touching the CSV. Each item gets a matcher and optional content.
+const SIGNIFICANT = [
+  // Examples (tweak the matchers to your CSV’s place strings/times if needed):
+  { key:"1964-alaska",  title:"1964 Great Alaska (Mw 9.2)", link:"https://earthquake.usgs.gov/earthquakes/eventpage/19640328_0336",
+    match: d => d.year===1964 && (d.locStAbbr==="AK" || /alaska|prince william|gulf of alaska/i.test(d.place||"")) },
+  { key:"1994-northridge", title:"1994 Northridge, CA", link:"https://earthquake.usgs.gov/earthquakes/eventpage/ci3144585",
+    match: d => d.year===1994 && /northridge|san fernando|los angeles/i.test(d.place||"") },
+  { key:"1989-loma-prieta", title:"1989 Loma Prieta, CA", link:"https://earthquake.usgs.gov/earthquakes/eventpage/nc216859",
+    match: d => d.year===1989 && /loma prieta|santa cruz|san francisco/i.test(d.place||"") },
+  { key:"2011-virginia", title:"2011 Virginia M5.8", link:"https://earthquake.usgs.gov/earthquakes/eventpage/se60231711",
+    match: d => d.year===2011 && (/virginia/i.test(d.place||"") || d.locStAbbr==="VA") }
+];
+
+function tagSignificant(list){
+  list.forEach(d => {
+    d._sig = null;
+    for (const s of SIGNIFICANT){
+      if (s.match(d)) { d._sig = s; break; }
+    }
+  });
+}
+
+function showCalloutFor(d){
+  const box = d3.select("#callout");
+  const s = d._sig;
+  if (!s){ hideCallout(); return; }
+  box.html(`
+    <div class="c-title">${s.title||"Significant Earthquake"}</div>
+    <div class="c-body">${d.place || displayLabel(d) || ""}</div>
+    <div class="c-actions">${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">Learn more →</a>` : ""}</div>
+  `).style("display","block");
+}
+function hideCallout(){ d3.select("#callout").style("display","none"); }
+document.addEventListener("click", (e)=>{ const c=document.getElementById("callout"); if (c && !c.contains(e.target)) hideCallout(); });
+
+(async function () {
+  /* ---------- Small helpers ---------- */
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const safeExtent = (arr, fallback=[0,1]) => {
+    if (!arr || !arr.length) return fallback.slice();
+    const e = d3.extent(arr.filter(x => x!=null && isFinite(x)));
+    if (e[0]==null || e[1]==null || isNaN(e[0]) || isNaN(e[1])) return fallback.slice();
+    if (e[0]===e[1]) return [e[0], e[0]+(typeof e[0]==="number"?1:1)];
+    return e;
+  };
+
+  // -------- Tooltip helpers --------
+  const fmtLat = (lat)=> `${Math.abs(lat).toFixed(3)}°${lat>=0?"N":"S"}`;
+  const fmtLon = (lon)=> `${Math.abs(lon).toFixed(3)}°${lon>=0?"E":"W"}`;
+
+  function magTypeShort(mt){
+    if (!mt) return "M";
+    const raw = String(mt).trim().toUpperCase();
+    if (raw.includes("TEXNET")) return "ML (TexNet)";
+    if (raw === "MLR") return "ML (revised)";
+    const k = raw.replace(/[^A-Z]/g,"");
+    const map = {
+      MW:"Mw", MWW:"Mw", MWC:"Mw", MWB:"Mw", MWR:"Mw", MWP:"Mw",
+      MS:"Ms", MB:"mb", MBLG:"mbLg", MLG:"mbLg", LG:"mbLg",
+      ML:"ML", MD:"Md", MC:"Mc", MH:"Mh", ME:"Me",
+      MA:"Ma", FA:"FA", MFA:"FA", UK:"Unknown"
+    };
+    return map[k] || raw;
+  }
+
+  function magTypeLong(mt){
+    if (!mt) return "";
+    const raw = String(mt).trim().toUpperCase();
+    if (raw.includes("TEXNET")) return "Local magnitude by TexNet (ML TexNet)";
+    if (raw === "MLR") return "Revised local magnitude (MLr)";
+    const k = raw.replace(/[^A-Z]/g,"");
+    const map = {
+      MW:"Moment magnitude (Mw)",
+      MWW:"Moment magnitude (W-phase) (Mw)",
+      MWC:"Moment magnitude (centroid/long-period) (Mw)",
+      MWB:"Moment magnitude (long-period body-wave inversion) (Mw)",
+      MWR:"Regional moment magnitude (full-waveform, regional) (Mw)",
+      MWP:"P-wave moment magnitude (MwP)",
+      MS:"Surface-wave magnitude (Ms, 20 s)",
+      MB:"Short-period body-wave magnitude (mb)",
+      MBLG:"Lg-wave regional body magnitude (mbLg/MLg)",
+      ML:"Local (Richter) magnitude (ML)",
+      MD:"Duration magnitude (Md)",
+      MC:"Coda/duration magnitude (Mc)",
+      MH:"Provisional/hand magnitude (Mh)",
+      ME:"Energy magnitude (Me)",
+      MA:"Amplitude magnitude (Ma)",
+      FA:"Felt-area magnitude (FA)",
+      MFA:"Felt-area magnitude (FA)",
+      UK:"Unknown/unspecified"
+    };
+    return map[k] || `Magnitude type (${raw})`;
+  }
+
+  // Canonicalize magnitude type variants seen in US catalogs
+  // Examples in your file: mw,mww,mwc,mwb,mwr,mwp, ml,ml(texnet),mlr, mb, ms,
+  // mblg/mb_lg/mlg/lg, md, mc, mh, ma, fa/mfa, uk
+  function canonMagType(mt){
+    if(!mt) return "";
+    let raw = String(mt).trim();
+    let s = raw.toLowerCase();
+    s = s.replace(/\(.*?\)/g, "");  // drop things like "(texnet)" for canonicalization
+    s = s.replace(/[^a-z]/g, "");   // remove underscores/dashes
+
+    // Moment family → native Mw
+    if (["mw","mww","mwc","mwb","mwr","mwp"].includes(s)) return "MW";
+
+    // Classical scales
+    if (s === "ms") return "MS";
+    if (s === "mb") return "MB";
+    if (["mblg","mlg","lg"].includes(s)) return "MBLG"; // Lg family
+    if (["ml","mlr"].includes(s)) return "ML";
+    if (s === "ma") return "MA";
+
+    // Duration/coda & other operational types
+    if (s === "md") return "MD";
+    if (s === "mc") return "MC";
+    if (s === "mh") return "MH";
+
+    // Felt-area/unknown/network
+    if (s === "fa" || s === "mfa") return "FA";
+    if (s === "uk") return "UK";
+
+    // Otherwise uppercase whatever we got
+    return s.toUpperCase();
+  }
+
+  function tooltipHTML(d){
+    const useMw   = document.getElementById("useMw").checked;
+    const mtShort = magTypeShort(d.magTypeOrig);   // show raw code nicely
+    const mOrig   = (d.mag!=null) ? `${mtShort} ${d.mag.toFixed(1)}` : "M?";
+    const mMw     = (d.magMw!=null) ? `Mw ${d.magMw.toFixed(1)}` : null;
+
+    // Title + asterisks
+    let title = "", titleClass = "";
+    let notes = [];
+
+    if (useMw && d._canMw){
+      // We show Mw (converted gets a star)
+      title = d._converted ? `${mMw}*` : mMw;
+      if (d._converted) notes.push("*Approximated from " + mOrig + " using Empirical Relations.");
+    } else {
+      // Either normalization is OFF or conversion isn't possible → show original with ** and grey
+      title = (d.mag!=null) ? `${mOrig}**` : "M?";
+      titleClass = "tt-grey";
+      if (!useMw && d._canMw) {
+        notes.push("**Normalization is Off — Showing Original Reported Scale.");
+      } else if (!d._canMw) {
+        notes.push("**Not Convertible to Mw with a Robust Global Relation, Shown as Reported.");
+      }
+    }
+
+    const depthTxt= d.depth==null ? "N/A" : `${Math.round(d.depth)} km`;
+    const coords  = (isFinite(d.lat)&&isFinite(d.lon)) ? `${fmtLat(d.lat)} / ${fmtLon(d.lon)}` : "—";
+    const when    = d.time ? new Date(d.time).toUTCString().replace("GMT","UTC") : "";
+
+    return `
+      <div class="tt-title"><b class="${titleClass}">${title}</b><span class="tt-sub"> — ${displayLabel(d)}</span></div>
+      <div class="tt-grid">
+        <div class="k">Depth</div><div><b>${depthTxt}</b></div>
+        <div class="k">Lat / Lon</div><div><code>${coords}</code></div>
+        <div class="k">Original data</div><div>${mOrig}</div>
+        ${when ? `<div class="k">Date</div><div>${when}</div>` : ""}
+      </div>
+      ${notes.length ? `<div class="tt-sub" style="margin-top:6px">${notes.join("<br>")}</div>` : ""}
+    `;
+  }
+
+  function placeTooltip(evt){
+    const view = document.querySelector(".view").getBoundingClientRect();
+    const pad  = 12;                          // breathing room from edges
+    const mx   = evt.clientX, my = evt.clientY;     // viewport coords
+    const tx   = mx - view.left;              // mouse relative to .view
+    const ty   = my  - view.top;
+
+    // After HTML is set, we can measure the box
+    const el = d3.select("#tooltip").node();
+    const tw = el.offsetWidth  || 240;
+    const th = el.offsetHeight || 120;
+
+    // Prefer right & above the cursor
+    let x = tx + 12;
+    let y = ty - th - 12;
+
+    // If not enough room above, flip below
+    if (y < pad) y = ty + 16;
+
+    // If not enough room on the right, flip to the left
+    if (x + tw + pad > view.width) x = tx - tw - 12;
+
+    // Final clamp to container
+    x = Math.max(pad, Math.min(x, view.width  - tw - pad));
+    y = Math.max(pad, Math.min(y, view.height - th - pad));
+
+    d3.select("#tooltip").style("left", x + "px").style("top", y + "px");
+  }
+
+
+  // ---- Magnitude normalization to Mw ----
+  // Approximate cross-scale conversions to Mw (US-centric, global-ish fits).
+  // Converted values are marked with * in UI; ranges/regions matter.
+  function approxMw(mag, typeCanon){
+    if (mag == null) return null;
+    const t = (typeCanon || "").toUpperCase();
+
+    // Already Mw (moment family)
+    if (t === "MW") return mag;
+
+    // Common conversions used in US practice (rough global fits):
+    if (t === "MS")   return 0.67 * mag + 2.07;         // Ms → Mw   (~M5.5–8 shallow)
+    if (t === "MB" ||
+        t === "MBLG") return 0.85 * mag + 1.03;         // mb/mbLg → Mw (regional body/Lg)
+    if (t === "ML")   return 0.884 * mag + 0.431;       // ML → Mw   (generic local magnitude)
+
+    // Not converted: MD/MC/MH/FA/UK/… (too regional/ambiguous)
+    return null;
+  }
+
+
+
+  // Current magnitude to use for size/filter/sort depending on the toggle
+  function magVal(d){
+    return document.getElementById("useMw").checked ? (d.magMw ?? d.mag) : d.mag;
+  }
+  window.magVal = magVal;
+
+
+  let _raf = 0;
+  function requestRepaint(){
+    if (_raf) return;
+    _raf = requestAnimationFrame(() => {
+      _raf = 0;
+      render();
+      drawInsetsTopRow();
+        updateRollingFeed();
+    });
+  }
+  window.requestRepaint = requestRepaint;
+
+  /* ---------- Story mode (Discover the Century) ---------- */
+  let storyMode = null; // 'top10' | 'deepest' | 'shallowest' | 'recent' | null
+
+  function clearStory(){
+    storyMode = null;
+    d3.selectAll(".quake").classed("dimmed", false).classed("story-hi", false);
+  }
+  window.clearStory = clearStory;
+
+  function fadeAndHighlight(selArray){
+    const set = new Set(selArray);
+    d3.selectAll(".quake").classed("dimmed", true).classed("story-hi", false);
+    d3.selectAll(".quake")
+      .filter(d => set.has(d))
+      .classed("dimmed", false)
+      .classed("story-hi", true)
+      .raise();
+  }
+
+  // Update sliders UI *without* triggering events (informational display of selection bounds)
+  function setMagUI(lo, hi){
+    const loR = document.getElementById('magMinR'), hiR = document.getElementById('magMaxR');
+    const loN = document.getElementById('magMinN'), hiN = document.getElementById('magMaxN');
+    const label = document.getElementById('magVals');
+    const dom = sizeScale.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${(+lo).toFixed(1)} – ${(+hi).toFixed(1)}`;
+  }
+
+  function setDepthUI(lo, hi){
+    const loR = document.getElementById('depthMinR'), hiR = document.getElementById('depthMaxR');
+    const loN = document.getElementById('depthMinN'), hiN = document.getElementById('depthMaxN');
+    const label = document.getElementById('depthVals');
+    const dom = color.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${lo} – ${hi}`;
+  }
+
+  function setYearUI(lo, hi){
+    const loR = document.getElementById('yearMinR'), hiR = document.getElementById('yearMaxR');
+    const loN = document.getElementById('yearMinN'), hiN = document.getElementById('yearMaxN');
+    const label = document.getElementById('yearVals');
+    const dom = yearExt; const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${lo} – ${hi}`;
+  }
+
+  // Compute selections
+  function storySelect(kind){
+    if (kind === "top10"){
+      return points
+        .filter(d => isFinite(magVal(d)))
+        .sort((a,b) => d3.descending(magVal(a), magVal(b)))
+        .slice(0,10);
+    } else if (kind === "deepest"){
+      const m = d3.max(points.filter(d=>d.depth!=null), d=>d.depth);
+      return points.filter(d=>d.depth!=null && d.depth===m);
+    } else if (kind === "shallowest"){
+      const m = d3.min(points.filter(d=>d.depth!=null), d=>d.depth);
+      return points.filter(d=>d.depth!=null && d.depth===m);
+    } else if (kind === "recent"){
+      const getTS = d=> d.time ? Date.parse(d.time) : -Infinity;
+      const m = d3.max(points, getTS);
+      return points.filter(d=> getTS(d)===m);
+    } else if (kind === "significant"){
+      return points.filter(d => d._sig);
+    }
+    return [];
+  }
+
+  // Apply a story (full data visible; highlight selection; sliders reflect bounds)
+  function applyStory(kind, { syncUI = true } = {}){
+    storyMode = kind;
+
+    // show all points (no filtering), keep current zoom
+    magRange = [sizeScale.domain()[0], sizeScale.domain()[1]];
+    depthRange = [color.domain()[0], color.domain()[1]];
+    yearRange = [yearExt[0], yearExt[1]];
+    render(); drawInsetsTopRow();
+
+    const sel = storySelect(kind);
+    if (!sel.length){ clearStory(); return; }
+
+    // Fade others, highlight selection
+    fadeAndHighlight(sel);
+
+    if (syncUI){
+        // Update slider UI to selection bounds (no filtering change)
+        const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
+        const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
+        const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
+        const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
+
+        setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
+        setDepthUI(Math.round(depLo), Math.round(depHi));
+        setYearUI(yrLo, yrHi);
+    }
+  }
+  window.applyStory = applyStory;
+
+  /* ---------- State maps ---------- */
+  const STATE_ABBR_TO_FULL = {
+    AL:"Alabama", AK:"Alaska", AZ:"Arizona", AR:"Arkansas", CA:"California", CO:"Colorado",
+    CT:"Connecticut", DE:"Delaware", FL:"Florida", GA:"Georgia", HI:"Hawaii", ID:"Idaho",
+    IL:"Illinois", IN:"Indiana", IA:"Iowa", KS:"Kansas", KY:"Kentucky", LA:"Louisiana",
+    ME:"Maine", MD:"Maryland", MA:"Massachusetts", MI:"Michigan", MN:"Minnesota",
+    MS:"Mississippi", MO:"Missouri", MT:"Montana", NE:"Nebraska", NV:"Nevada",
+    NH:"New Hampshire", NJ:"New Jersey", NM:"New Mexico", NY:"New York",
+    NC:"North Carolina", ND:"North Dakota", OH:"Ohio", OK:"Oklahoma", OR:"Oregon",
+    PA:"Pennsylvania", RI:"Rhode Island", SC:"South Carolina", SD:"South Dakota",
+    TN:"Tennessee", TX:"Texas", UT:"Utah", VT:"Vermont", VA:"Virginia", WA:"Washington",
+    WV:"West Virginia", WI:"Wisconsin", WY:"Wyoming", DC:"District of Columbia",
+    PR:"Puerto Rico", GU:"Guam", VI:"Virgin Islands", AS:"American Samoa", MP:"Northern Mariana Islands"
+  };
+  const STATE_FULL_TO_ABBR = Object.fromEntries(Object.entries(STATE_ABBR_TO_FULL).map(([k,v])=>[v.toLowerCase(), k]));
+  function normalizeStateToken(token){
+    if(!token) return {abbr:"", full:""};
+    const t = token.trim();
+    if (STATE_ABBR_TO_FULL[t.toUpperCase()]) return { abbr:t.toUpperCase(), full: STATE_ABBR_TO_FULL[t.toUpperCase()] };
+    const ab = STATE_FULL_TO_ABBR[t.toLowerCase()];
+    if (ab) return { abbr:ab, full:STATE_ABBR_TO_FULL[ab] };
+    return { abbr:"", full:"" };
+  }
+  function findStateInText(text){
+    if (!text) return null;
+    const t = text.toLowerCase();
+    let best = null;
+    for (const [fullLower, abbr] of Object.entries(STATE_FULL_TO_ABBR)){
+      const idx = t.indexOf(fullLower);
+      if (idx !== -1){
+        if (!best || fullLower.length > best.fullLower.length){
+          best = { abbr, full: STATE_ABBR_TO_FULL[abbr], fullLower };
+        }
+      }
+    }
+    return best ? { abbr: best.abbr, full: best.full } : null;
+  }
+  const cleanCityToken = s => (s||"").replace(/^\s*(?:the\s+)?\d{3,4}\s+/i, "").trim();
+  const displayLabel = d => (d.locCity && d.locStAbbr)?`${d.locCity}, ${d.locStAbbr}`:(d.locStAbbr||d.locLabel||d.region||"Location");
+
+  /* ---------- Layout & map ---------- */
+  const svg = d3.select("#svg");
+  const zoomLayer = svg.append("g");
+  const mapG = zoomLayer.append("g");
+  const ptsG = zoomLayer.append("g");
+  const legendG = svg.append("g");
+  const insetsG = svg.append("g");
+  const tooltip = d3.select("#tooltip");
+
+  function sizeSVG(){
+    const r = document.querySelector(".view").getBoundingClientRect();
+    const w = Math.max(100, r.width||0);
+    const h = Math.max(100, r.height||0);
+    svg.attr("viewBox", [0,0,w,h]);
+    return { width:w, height:h };
+  }
+  let { width, height } = sizeSVG();
+  let insetBandH = 0; // dynamic height for the top inset strip
+
+  let projection = d3.geoAlbersUsaTerritories();
+  let path = d3.geoPath(projection);
+
+  function updateProjection(){
+    insetBandH = Math.max(120, height * 0.26);        // top strip reserved for insets
+    const mapH = Math.max(100, height - insetBandH);   // height available for main map
+    projection = d3.geoAlbersUsaTerritories()
+                 .translate([width/2, insetBandH + mapH/2]) // center in lower band
+                 .scale(Math.max(300, Math.min(width, mapH) * 1.8));
+    path = d3.geoPath(projection);
+
+    mapG.selectAll("path").attr("d", path);
+
+    computeInsetRects();
+    recomputeInsetMembership();
+  }
+
+    const us = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(r=>r.json());
+
+    const allStatesFC   = topojson.feature(us, us.objects.states);
+    const stateFeatures = allStatesFC.features;
+
+    const findStateByFIPS = (fips) => stateFeatures.find(s => normId(s.id) === fips);
+
+    // Which states go in the top insets
+    const FIPS = { AK: "02", HI: "15", PR: "72" };
+
+    // Padded screen boxes for inset classification (in pixels)
+    const PAD = { AK: 60, HI: 30, PR: 35 };
+    let insetRects = {}; // { AK:[ [x0,y0],[x1,y1] ], ... }
+
+    function computeInsetRects(){
+      ["AK","HI","PR"].forEach(ab=>{
+        const f = findStateByFIPS(FIPS[ab]); if(!f) return;
+        const b = path.bounds(f);                    // screen-space bounds of land
+        const p = PAD[ab] || 20;
+        insetRects[ab] = [[b[0][0]-p, b[0][1]-p], [b[1][0]+p, b[1][1]+p]];
+      });
+    }
+
+    // mark points that belong to AK/HI/PR inset regions (by screen box OR on-land)
+    function recomputeInsetMembership(){
+      const order = ["AK","HI","PR"];
+
+      points.forEach((d,i)=>{
+        // cache projected coords (used by main map and insets)
+        const p = projection([d.lon, d.lat]);
+        d._px = p ? p[0] : null;
+        d._py = p ? p[1] : null;
+
+        // decide which inset, using fast screen-rect test then (rare) geoContains fallback
+        let code = null;
+        if (p){
+          for (const ab of order){
+            const r = insetRects[ab]; if (!r) continue;
+            if (d._px>=r[0][0] && d._px<=r[1][0] && d._py>=r[0][1] && d._py<=r[1][1]) { code = ab; break; }
+          }
+        }
+        if (!code){
+          for (const ab of order){
+            const f = findStateByFIPS(FIPS[ab]);
+            if (f && d3.geoContains(f, [d.lon, d.lat])) { code = ab; break; }
+          }
+        }
+        d._insetCode = code;       // 'AK' | 'HI' | 'PR' | null
+        d._inInset    = !!code;    // keep your existing flag for backward-compat
+
+        if (!d._key) d._key = `${d.time||""}|${d.lat}|${d.lon}|${i}`; // stable key once
+      });
+    }
+
+
+    // IDs we want in the top-row insets only
+    const excludedIds = new Set(["02","15","72"]); // AK, HI, PR
+    const id2 = s => String(s.id).padStart(2,"0");
+
+    // CONUS only features (remove AK/HI/PR)
+    const conusFeatures = stateFeatures.filter(f => !excludedIds.has(id2(f)));
+
+    // Borders only for CONUS
+    const conusBorders = topojson.mesh(
+      us, us.objects.states,
+      (a,b) => a !== b && !excludedIds.has(id2(a)) && !excludedIds.has(id2(b))
+    );
+
+    // Draw CONUS states (as individual paths) + borders
+    mapG.selectAll("path.state")
+      .data(conusFeatures)
+      .join("path")
+      .attr("class","states")
+      .attr("d", path);
+
+    mapG.selectAll("path.state-borders")
+      .data([conusBorders])
+      .join("path")
+      .attr("class","state-borders")
+      .attr("d", path);
+
+  // function maskInsetStates(){
+  //   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#0b0e14';
+  //   const toMask = stateFeatures.filter(s => excludedIds.has(String(s.id)));
+  //   const sel = maskG.selectAll("path").data(toMask, d => d.id);
+  //   sel.enter().append("path")
+  //       .merge(sel)
+  //       .attr("d", path)
+  //       .attr("fill", bg)
+  //       .attr("stroke", bg);
+  //   sel.exit().remove();
+  // }
+
+
+  /* ---------- Data ---------- */
+  const data = await d3.csv("../dataset/us_earthquakes_m4.5_cleaned.csv", d=>{
+    const depth = (d.depth===""||d.depth==null)?null:+d.depth;
+    const mag   = (d.mag===""  ||d.mag==null)?null:+d.mag;
+    const lat=+d.latitude, lon=+d.longitude;
+    const year = d.time ? new Date(d.time).getUTCFullYear() : null;
+    const magTypeOrig = (d.magType || d.magtype || d.mag_type || "").trim(); // raw code as-reported
+    const magType = canonMagType(magTypeOrig);
+    return { time:d.time, year, place:d.place||"", region:d.region||"", depth, mag, lat, lon, magType, magTypeOrig };
+  });
+  const points = data.filter(d => isFinite(d.lat) && isFinite(d.lon));
+
+  // Make data visible to the feed helpers defined outside the IIFE
+  window.points = points;
+
+  // Precompute an approximate Mw for each event (maybe null if not convertible)
+  points.forEach(d => { d.magMw = approxMw(d.mag, d.magType); });
+
+  points.forEach(d => {
+      d._nativeMw  = d.magType === "MW";   // canonical check
+      d._canMw     = d.magMw != null;      // convertible OR native
+      d._converted = d._canMw && !d._nativeMw;
+      d._shape     = d._canMw ? "circle" : "triangle";
+  });
+
+
+  function cityStateFromPlace(d){
+    const place = (d.place||"").trim();
+    const region = (d.region||"").trim();
+
+    let m = place.match(/of\s+([^,]+)\s*,\s*([A-Za-z.\s-]{2,})(?:\s+Earthquake)?\s*$/i);
+    if (m){
+      const city = cleanCityToken(m[1]); const st = normalizeStateToken(m[2]);
+      if (city && st.abbr) return {label:`${city}, ${st.abbr}`, city, stAbbr:st.abbr, stFull:st.full};
+    }
+    m = place.match(/^\s*([^,]+)\s*,\s*([A-Za-z.\s-]{2,})(?:\s+Earthquake)?\s*$/i);
+    if (m){
+      const city = cleanCityToken(m[1]); const st = normalizeStateToken(m[2]);
+      if (city && st.abbr) return {label:`${city}, ${st.abbr}`, city, stAbbr:st.abbr, stFull:st.full};
+    }
+    if (region){
+      const parts = region.split(",").map(s=>s.trim());
+      if (parts.length===2){
+        const city = cleanCityToken(parts[0]); const st = normalizeStateToken(parts[1]);
+        return { label:`${city}, ${st.abbr}`, city, stAbbr:st.abbr, stFull:st.full };
+      } else if (parts.length===1){
+        const st = normalizeStateToken(parts[0]);
+        if (st.abbr) return { label: st.abbr, city:"", stAbbr:st.abbr, stFull:st.full };
+      }
+    }
+    const found = findStateInText(place) || findStateInText(region);
+    if (found) return { label: found.abbr, city:"", stAbbr:found.abbr, stFull:found.full };
+
+    const tail = place.split(',').map(s=>s.trim());
+    if (tail.length>=2){
+      const st = normalizeStateToken(tail[tail.length-1]);
+      const city = cleanCityToken(tail[tail.length-2].replace(/.*of\s+/i,''));
+      if (city && st.abbr) return {label:`${city}, ${st.abbr}`, city, stAbbr:st.abbr, stFull:st.full};
+    }
+    return {label:"", city:"", stAbbr:"", stFull:""};
+  }
+
+  points.forEach(d => {
+    const cs = cityStateFromPlace(d);
+    d.locLabel = cs.label;
+    d.locCity  = cs.city;
+    d.locStAbbr= cs.stAbbr;
+    d.locStFull= cs.stFull;
+  });
+
+  // // FIPS ids for states in us-atlas (AK=02, HI=15, PR=72)
+  // // FIPS ids must be strings in us-atlas
+  // const FIPS = { AK: "02", HI: "15", PR: "72" };
+
+  // const insetFeatures = ["AK","HI","PR"]
+  //   .map(ab => findStateByFIPS(FIPS[ab]))
+  //   .filter(Boolean);
+  //
+  // console.log("Inset features:", insetFeatures.map(f => String(f.id).padStart(2,"0")));
+  // console.log("Inset points flagged:", points.filter(p => p._inInset).length);
+
+
+  // points.forEach(d => {
+  //   d._inInset = insetFeatures.some(f => d3.geoContains(f, [d.lon, d.lat]));
+  // });
+
+
+  function zoomToBBox(b){
+    const [[x0,y0],[x1,y1]] = b;
+    const pad = 30;
+    const w = x1 - x0 + pad*2, h = y1 - y0 + pad*2;
+    const k = Math.min(width / w, height / h) * 0.9;
+    const cx = (x0 + x1)/2, cy = (y0 + y1)/2;
+    svg.transition().duration(600)
+      .call(zoom.transform,
+        d3.zoomIdentity
+          .translate(width/2, height/2)
+          .scale(k)
+          .translate(-cx, -cy));
+  }
+
+  function drawInsetsTopRow(){
+      insetsG.selectAll("*").remove();
+
+      const marginX = 12, marginY = 8, gap = 8;
+      const bandH   = insetBandH;                         // from updateProjection()
+      const boxW    = (width - marginX*2 - gap*2) / 3;    // three equal boxes across
+      const boxH    = bandH - marginY*2;
+      const xPos    = [marginX, marginX + boxW + gap, marginX + (boxW + gap)*2];
+      const statesOrder = ["AK","HI","PR"];
+
+      // defs for inset clipping (once per redraw)
+      const insetDefs = svg.select("defs#insetDefs").empty()
+          ? svg.append("defs").attr("id","insetDefs")
+          : svg.select("defs#insetDefs");
+
+      statesOrder.forEach((ab, i) => {
+        const f = findStateByFIPS(FIPS[ab]);
+        if (!f) return;
+
+        const rectX = xPos[i], rectY = marginY;
+
+        // 1) Dotted frame + label
+        insetsG.append("rect")
+          .attr("class", "insetBox")
+          .attr("x", rectX).attr("y", rectY)
+          .attr("width", boxW).attr("height", boxH);
+
+        insetsG.append("text")
+          .attr("class", "insetTitle")
+          .attr("x", rectX + 8).attr("y", rectY + 16)
+          .text(ab);
+
+        // 1.5) Clip-path so content stays inside the dashed box
+        const cpId = `insetClip-${ab}`;
+        insetDefs.select(`#${cpId}`).remove();
+        insetDefs.append("clipPath")
+            .attr("id", cpId)
+            .attr("clipPathUnits", "userSpaceOnUse")
+            .append("rect")
+            .attr("x", rectX).attr("y", rectY)
+            .attr("width", boxW).attr("height", boxH);
+
+
+        // 2) Fit the state geometry into the box using a group transform
+        const b = path.bounds(f);
+        const bW = b[1][0] - b[0][0], bH = b[1][1] - b[0][1];
+        const s  = 0.86 * Math.min(boxW / bW, boxH / bH);  // a bit more padding
+        const cx = (b[0][0] + b[1][0]) / 2;
+        const cy = (b[0][1] + b[1][1]) / 2;
+
+        // apply clip to a wrapper; keep the transform on an inner <g>
+        const wrap = insetsG.append("g").attr("clip-path", `url(#${cpId})`);
+        const g = wrap.append("g")
+            .attr("transform",
+                `translate(${rectX + boxW/2},${rectY + boxH/2}) scale(${s}) translate(${-cx},${-cy})`);
+
+        // 3) State land
+        g.append("path").datum(f)
+          .attr("class", "states")
+          .attr("d", path);
+
+        // 4) Quakes within that state/territory (geoContains = robust)
+        const hideUnconverted = document.getElementById("hideUnconverted").checked;
+        const isRoll = isRolling();
+        const pts = points.filter(d =>
+          passesFilters(d) &&
+          d._insetCode === ab &&
+          (!hideUnconverted || d._canMw) &&
+          (!isRoll || (Number.isFinite(d.tsMonth) &&
+              d.tsMonth <= rollingMon &&
+              (rollingMon - d.tsMonth) < 6))
+        );
+
+
+        // Convertible/native Mw → circles
+        const ptsC = pts.filter(d => d._canMw);
+        g.selectAll("circle").data(ptsC).join("circle")
+          .attr("class","quake nonScaleStroke")
+          .attr("r", d => dataRadius(magVal(d), 1) / s)
+          .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+          .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+          .attr("fill-opacity", d => {
+            const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+            return base * rollingAlpha(d);
+          })
+          .on("click", (event, d) => {
+            if (mode === "discover" && storyMode === "significant" && d._sig){
+              showCalloutFor(d);
+              event.stopPropagation();
+            }
+          })
+
+          .on("mousemove", (event, d) => {
+              tooltip.html(tooltipHTML(d)).style("opacity", 1);
+              placeTooltip(event);
+          })
+          .on("mouseleave", ()=> tooltip.style("opacity", 0));
+
+        // Not convertible → triangles (size adjusted by 1/s so screen size is stable)
+        const ptsT = pts.filter(d => !d._canMw);
+        g.selectAll("path.tri").data(ptsT).join("path")
+          .attr("class","quake tri nonScaleStroke")
+          .attr("d", d => {
+            const r = dataRadius(magVal(d), 1) / s;
+            return d3.symbol().type(d3.symbolTriangle).size(Math.PI * r * r)();
+          })
+          .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+          .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+          .attr("fill-opacity", d => {
+            const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+            return base * rollingAlpha(d);
+          })
+          .on("click", (event, d) => {
+            if (mode === "discover" && storyMode === "significant" && d._sig){
+              showCalloutFor(d);
+              event.stopPropagation();
+            }
+          })
+
+          .on("mousemove", (event, d) => {
+            tooltip.html(tooltipHTML(d)).style("opacity", 1);
+            placeTooltip(event);
+          })
+          .on("mouseleave", ()=> tooltip.style("opacity", 0));
+      });
+    }
+
+
+  /* ---------- Location entries (canonical display) ---------- */
+  const locMap = new Map();
+  for (const d of points){
+    if (!d.locLabel) continue;
+    const key = d.locLabel;
+    const rawPlace = (d.place||"").toLowerCase();
+    const rawRegion= (d.region||"").toLowerCase();
+    const labelLower = key.toLowerCase();
+    const withFull = d.locCity ? `${d.locCity}, ${d.locStFull}` : d.locStFull;
+    const withFullLower = (withFull||"").toLowerCase();
+
+    if (!locMap.has(key)){
+      locMap.set(key, { label:key, count:1, forms:new Set([labelLower, withFullLower, rawPlace, rawRegion]), stAbbr:d.locStAbbr||"", stFull:d.locStFull||"" });
+    } else {
+      const e = locMap.get(key);
+      e.count++;
+      e.forms.add(labelLower);
+      if (withFullLower) e.forms.add(withFullLower);
+      if (rawPlace) e.forms.add(rawPlace);
+      if (rawRegion) e.forms.add(rawRegion);
+    }
+  }
+  const locEntries = Array.from(locMap.values())
+    .map(e => ({ label:e.label, count:e.count, forms:Array.from(e.forms), stAbbr:e.stAbbr, stFull:e.stFull }))
+    .sort((a,b)=> d3.descending(a.count,b.count) || d3.ascending(a.label,b.label));
+
+  /* ---------- Scales & UI state (safe domains) ---------- */
+  const depthExt  = safeExtent(points.map(d=>d.depth).filter(v=>v!=null && isFinite(v)), [-10,700]);
+  const dDomMin   = Math.floor(depthExt[0]);
+  const dDomMax   = Math.max(Math.ceil(depthExt[1]), dDomMin + 1);
+
+  const magExt    = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
+  const yearExt   = safeExtent(points.map(d=>d.year).filter(v=>v!=null && isFinite(v)), [1900, 2025]);
+
+  // --- Visual encodings ---
+
+  // ---- Depth color (nonlinear) ----
+  const depthRamp = d3.piecewise(d3.interpolateHcl, [
+    "#e4ffc6", // shallow: light green
+    "#fee08b", // yellow
+    "#fdae61", // orange
+    "#f46d43", // red
+    "#305cde"  // very deep: dark blue
+  ]);
+
+  // Breakpoints emphasize the shallow crust and upper mantle
+  //   0–15, 15–35, 35–70, 70–120, 120–200, 200–275 km
+  // Range values allocate *more* of the color ramp to shallow bins.
+  const depthWarp = d3.scaleLinear()
+    .domain([dDomMin,   15,   35,   70,   120,   200,   dDomMax])   // km
+    .range ([0.00,    0.30, 0.48, 0.66, 0.82,  0.93,   1.00])      // ramp t
+    .clamp(true);
+
+  // Compose: scaleSequential normalizes x→t, we reconstruct depth from t,
+  // then apply the warp → ramp. Keeps .domain() working for legend, sliders.
+  const color = d3.scaleSequential(t => {
+    const depth = dDomMin + t * (dDomMax - dDomMin);
+    return depthRamp(depthWarp(depth));
+  })
+  .domain([dDomMin, dDomMax])
+  .clamp(true);
+
+  // Magnitude size: bigger top end + more separation
+  const sizeScale = d3.scaleSqrt().domain(magExt).range([3.5, 24]);
+
+  // Larger quakes pop more through clusters
+  const alphaScale = d3.scaleLinear().domain(magExt).range([0.55, 0.98]).clamp(true);
+
+  // On-screen radius guard so small events don’t vanish, big ones don’t overwhelm
+  let currK = 1;            // updated by zoom handler
+  const MIN_SCREEN_R = 3.2; // px
+  const MAX_SCREEN_R = 26;  // px
+
+  const dataRadius = (mag, k = currK) => {
+    const r = sizeScale(mag ?? magExt[0]);
+    const ksafe = Math.max(1e-6, k);
+    return Math.min(Math.max(r, MIN_SCREEN_R / ksafe), MAX_SCREEN_R / ksafe);
+  };
+
+
+
+  window.addEventListener("resize", ()=>{
+      ({width,height}=sizeSVG());
+      updateProjection();
+      drawLegend();
+      render();
+      drawInsetsTopRow();
+  });
+
+  let magRange=[magExt[0],magExt[1]], depthRange=[dDomMin,dDomMax], yearRange=[yearExt[0],yearExt[1]];
+  const selectedLocs = new Set(); // "City, ST" or "ST"
+
+  /* ---------- Dual sliders init (safe) ---------- */
+  function initDual({domain,step,ids,onChange,labelElId}){
+    const [loR,hiR,loN,hiN]=[ids.lowerRange,ids.upperRange,ids.lowerNum,ids.upperNum].map(id=>document.getElementById(id));
+    const label=document.getElementById(labelElId);
+    [loR.min,hiR.min,loN.min,hiN.min]=[domain[0],domain[0],domain[0],domain[0]];
+    [loR.max,hiR.max,loN.max,hiN.max]=[domain[1],domain[1],domain[1],domain[1]];
+    [loR.step,hiR.step,loN.step,hiN.step]=[step,step,step,step];
+    const round=(v)=> step>=1?Math.round(v/step)*step:Math.round(v*10)/10;
+    const clampD=v=>clamp(round(v), domain[0], domain[1]);
+    const paint=(a,b)=>{const p=v=>100*(v-domain[0])/(domain[1]-domain[0]||1);loR.style.background=`linear-gradient(to right,#dfe8f6 ${p(domain[0])}%,var(--accent) ${p(a)}%,var(--accent) ${p(b)}%,#dfe8f6 ${p(domain[1])}%)`;};
+    const sync=(a,b,notify=true)=>{a=clampD(a);b=clampD(b);if(a>b)[a,b]=[b,a];[loR.value,hiR.value,loN.value,hiN.value]=[a,b,a,b];paint(a,b);if(label){const f=step===0.1?x=>(+x).toFixed(1):x=>x;label.textContent=`${f(a)} – ${f(b)}`;}if(notify)onChange([a,b]);};
+    loR.oninput=()=>sync(+loR.value,+hiR.value);
+    hiR.oninput=()=>sync(+loR.value,+hiR.value);
+    loN.onchange=()=>sync(+loN.value,+hiN.value);
+    hiN.onchange=()=>sync(+loN.value,+hiN.value);
+    sync(domain[0],domain[1],false); onChange([domain[0],domain[1]]);
+  }
+  initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; requestRepaint(); }});
+  initDual({ domain:[dDomMin,dDomMax], step:1, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; requestRepaint(); }});
+  initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; requestRepaint(); }});
+
+
+  // Cancel story mode when user manually touches any filter
+  [
+    "magMinR","magMaxR","magMinN","magMaxN",
+    "depthMinR","depthMaxR","depthMinN","depthMaxN",
+    "yearMinR","yearMaxR","yearMinN","yearMaxN",
+    "includeNA","useMw","hideUnconverted"
+  ].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", clearStory);
+    el.addEventListener("change", clearStory);
+  });
+
+
+  /* ---------- Location: suggestions + chips ---------- */
+  const locInput = document.getElementById("locInput");
+  const locPanel = document.getElementById("locSuggest");
+  const chipsBox = document.getElementById("chips");
+  const clearBtn = document.getElementById("clearLoc");
+  let activeIdx = -1;
+
+  const canonQuery = (q)=>{
+    const parts = q.split(",").map(s=>s.trim());
+    if (parts.length>=2){
+      const stateTok = parts.pop();
+      const ab = STATE_ABBR_TO_FULL[stateTok.toUpperCase()] ? stateTok.toUpperCase()
+               : (STATE_FULL_TO_ABBR[stateTok.toLowerCase()] || "");
+      return parts.join(", ") + (ab ? (", " + ab) : "");
+    }
+    return q;
+  };
+
+  function closePanel(){ locPanel.style.display = "none"; activeIdx=-1; }
+  function openPanel(){ if (locPanel.childElementCount>0){ locPanel.style.display = "block"; } }
+
+  function renderChips(){
+    chipsBox.innerHTML = "";
+    for (const label of selectedLocs){
+      const span = document.createElement("span");
+      span.className = "chip";
+      span.innerHTML = `${label} <span class="x" title="Remove">×</span>`;
+      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); clearStory(); requestRepaint(); };
+      chipsBox.appendChild(span);
+    }
+  }
+  function addSelection(label){
+      if (!label) return;
+      selectedLocs.add(label);
+      renderChips();
+      clearStory();
+      requestRepaint();
+  }
+
+  function renderSuggestions(qRaw){
+    const qTrim = (qRaw||"").trim();
+    const qLower = qTrim.toLowerCase();
+    locPanel.innerHTML = "";
+    if (!qTrim){ closePanel(); return; }
+
+    const abbrOnly = STATE_ABBR_TO_FULL[qTrim.toUpperCase()] ? qTrim.toUpperCase() : "";
+    const fullOnlyAbbr = STATE_FULL_TO_ABBR[qLower] || "";
+
+    let results = [];
+
+    if (abbrOnly || fullOnlyAbbr){
+      const ab = abbrOnly || fullOnlyAbbr;
+      const stateTop = { label: ab, count: 0, _state:true };
+      const cityList = locEntries.filter(e => e.stAbbr === ab);
+      results = [stateTop, ...cityList];
+    } else {
+      const qCanon = canonQuery(qTrim).toLowerCase();
+      const starts = [], contains = [];
+      for (const e of locEntries){
+        const mStart = e.forms.some(f => f && (f.startsWith(qCanon) || f.startsWith(qLower)));
+        const mCont  = !mStart && e.forms.some(f => f && f.includes(qLower));
+        if (mStart) starts.push(e); else if (mCont) contains.push(e);
+        if (starts.length >= 10) break;
+      }
+      results = starts.concat(contains);
+    }
+
+    if (!results.length){ closePanel(); return; }
+
+    for (const r of results){
+      const div = document.createElement("div");
+      div.className = "loc-item";
+      if (r._state){
+        div.textContent = r.label + " (all)"; const sm=document.createElement("small"); sm.textContent="state"; div.appendChild(sm);
+      } else {
+        div.textContent = r.label; const sm=document.createElement("small"); sm.textContent=r.count; div.appendChild(sm);
+      }
+      div.addEventListener("mousedown", (e)=>{ e.preventDefault(); addSelection(r.label); locInput.value = "";});
+      locPanel.appendChild(div);
+    }
+    activeIdx = -1; openPanel();
+  }
+  function applyTyped(){
+    const typed = locInput.value.trim();
+    if (!typed) return;
+    const ab = STATE_ABBR_TO_FULL[typed.toUpperCase()] ? typed.toUpperCase()
+             : (STATE_FULL_TO_ABBR[typed.toLowerCase()] || "");
+    if (ab){ addSelection(ab); return; }
+    const typedCanon = canonQuery(typed);
+    if (locMap.has(typedCanon)) { addSelection(typedCanon); return; }
+    if (locMap.has(typed))      { addSelection(typed); return; }
+  }
+  locInput.addEventListener("input", (e)=> renderSuggestions(e.target.value));
+  locInput.addEventListener("keydown", (e)=>{
+    const items = Array.from(locPanel.children);
+    if (e.key === "ArrowDown" && items.length){
+      e.preventDefault(); activeIdx = Math.min(items.length-1, activeIdx+1);
+      items.forEach((el,i)=> el.classList.toggle("active", i===activeIdx));
+      if (activeIdx>=0) items[activeIdx].scrollIntoView({block:"nearest"});
+    } else if (e.key === "ArrowUp" && items.length){
+      e.preventDefault(); activeIdx = Math.max(-1, activeIdx-1);
+      items.forEach((el,i)=> el.classList.toggle("active", i===activeIdx));
+    } else if (e.key === "Enter"){
+      e.preventDefault();
+      if (activeIdx>=0 && items[activeIdx]){
+        const txt = items[activeIdx].textContent.replace(/\s+\(all\)\s*state?$/,'').trim();
+        addSelection(txt);
+      } else {
+        applyTyped();
+      }
+      locInput.value = ""; closePanel();
+    } else if (e.key === "Backspace" && !locInput.value){
+      const last = Array.from(selectedLocs).pop(); if (last){ selectedLocs.delete(last); renderChips(); requestRepaint(); }
+    } else if (e.key === "Escape"){ closePanel(); }
+  });
+  document.addEventListener("click", (e)=>{ if (!document.querySelector(".locbox").contains(e.target)) closePanel(); });
+  document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); requestRepaint(); };
+
+  /* ---------- Legend ---------- */
+    function drawLegend(){
+      legendG.selectAll("*").remove();
+      const pad = 10;
+      const cardW = Math.min(260, Math.max(220, width * 0.22));
+      const depthBarH = 12;
+
+      // magnitude legend needs this
+      const mags = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
+      const sScale = sizeScale.copy().domain(mags);
+      const maxR = sScale(mags[1]);
+
+      const naBlockW = 42; // room for the N/A row
+      const naR = 6;
+      const cardH = 26 + depthBarH + 12 + 16 + 8 + 26 + maxR + 12 + 8;
+      const x0 = width - cardW - 12;
+      const y0 = height - cardH - 12;
+
+      legendG.append("rect")
+        .attr("class","legend-card")
+        .attr("x",x0).attr("y",y0).attr("width",cardW).attr("height",cardH);
+
+      // --- Depth bar ---
+      legendG.append("text")
+        .attr("class","legend-title")
+        .attr("x",x0+pad).attr("y",y0+18)
+        .text("Depth (km)");
+
+      const barW = cardW - pad*2 - naBlockW;  // leave room on the right for N/A
+      const gradId = "depthGrad";
+      const defs = legendG.append("defs");
+      const grad = defs.append("linearGradient")
+        .attr("id",gradId).attr("x1","0%").attr("x2","100%").attr("y1","0%").attr("y2","0%");
+
+      const [d0,d1] = color.domain();
+
+      // Sample the warped color along the *data* domain to draw a smooth bar
+      for (let i=0;i<=48;i++){
+        const v = d0 + (i/48)*(d1-d0);
+        const off = (v - d0)/(d1 - d0);
+        grad.append("stop").attr("offset",`${off*100}%`).attr("stop-color", color(v));
+      }
+
+      legendG.append("rect")
+        .attr("x",x0+pad+naBlockW).attr("y",y0+26)
+        .attr("width",barW).attr("height",depthBarH)
+        .attr("rx",6).attr("ry",6)
+        .attr("fill",`url(#${gradId})`)
+        .attr("stroke","#243142");
+
+      // Ticks at interpretable breaks
+      const breaksAll = (d0 < 0)
+        ? [0, 15, 35, 70, 120, 200, 275]
+          : [0, 15, 35, 70, 120, 200, 275];
+      const breaks = breaksAll.filter(v => v>=d0 && v<=d1);
+      const tickY = y0 + 26 + depthBarH + 12;
+      const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted') || '#6b7280';
+
+      breaks.forEach(v=>{
+        const t = (v - d0)/(d1 - d0);
+        const tx = x0 + pad + naBlockW + barW*t;
+        legendG.append("line")
+          .attr("x1",tx).attr("x2",tx)
+          .attr("y1",y0+26+depthBarH).attr("y2",y0+26+depthBarH+6)
+          .attr("stroke", "#8ea0b5");
+        legendG.append("text")
+          .attr("x",tx).attr("y",tickY).attr("text-anchor","middle")
+          .attr("fill", muted).attr("font-size",11)
+          .text(v);
+      });
+
+      // N/A circle to the right of the depth bar
+      const naCx = x0 + pad + naBlockW/2;
+      const naCy = y0 + 26 + depthBarH/2;
+      legendG.append("circle")
+        .attr("cx", naCx).attr("cy", naCy).attr("r", naR)
+        .attr("fill", "#9aa0a6").attr("stroke", "#243142");
+
+      legendG.append("text")
+        .attr("x", naCx).attr("y", naCy + naR + 12)
+        .attr("text-anchor", "middle")
+        .attr("fill", muted).attr("font-size", 11)
+        .text("N/A");
+
+
+
+      // --- Magnitude (uses your actual size scale) ---
+      const magTitleY = tickY + 8 + 16;
+      legendG.append("text")
+        .attr("class","legend-title")
+        .attr("x",x0+pad).attr("y",magTitleY)
+        .text("Magnitude");
+
+      const magVals = [mags[0], (mags[0]+mags[1])/2, mags[1]].map(v=>+v.toFixed(1));
+      const cxLeft  = x0 + pad + maxR + 4;
+      const cxRight = x0 + cardW - pad - maxR - 4;
+      const gap = (cxRight - cxLeft) / (magVals.length - 1);
+      const circlesY = magTitleY + 10 + 16;
+
+      magVals.forEach((m,i)=>{
+        const cx = cxLeft + i*gap, r = sScale(m);
+        legendG.append("circle")
+          .attr("cx",cx).attr("cy",circlesY).attr("r",r)
+          .attr("fill","#e6e6e6").attr("fill-opacity",.9)
+          .attr("stroke","#000").attr("stroke-opacity",.4);
+        legendG.append("text")
+          .attr("x",cx).attr("y",circlesY + r + 12)
+          .attr("text-anchor","middle").attr("fill", muted).attr("font-size",11)
+          .text(m);
+      });
+    }
+
+  function passesFilters(d){
+    const mNow = magVal(d);
+    const magOK = (mNow != null && mNow >= magRange[0] && mNow <= magRange[1]);
+    const yearOK  = (d.year != null && d.year >= yearRange[0]  && d.year <= yearRange[1]);
+    const depthOK = d.depth == null ? document.getElementById("includeNA").checked
+                                  : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
+
+    let locOK = true;
+    if (selectedLocs.size > 0){
+      const st  = (d.locStAbbr||"").toUpperCase();
+      const lbl = (d.locLabel||"");
+      locOK = (st && selectedLocs.has(st)) || (lbl && selectedLocs.has(lbl));
+    }
+    return magOK && yearOK && depthOK && locOK;
+  }
+  window.passesFilters = passesFilters;
+
+
+  /* ---------- Render ---------- */
+  function render(){
+    try{
+      const allowNA = document.getElementById("includeNA").checked;
+
+      const hideUnconverted = document.getElementById("hideUnconverted").checked;
+      const isRoll = isRolling();
+      const filtered = points.filter(d =>
+        passesFilters(d) &&
+        !d._insetCode &&
+        (!hideUnconverted || d._canMw) &&
+        (!isRoll || (Number.isFinite(d.tsMonth) &&
+            d.tsMonth <= rollingMon &&
+            (rollingMon - d.tsMonth) < 6))
+      );
+
+
+
+      // Circles for convertible/native Mw
+      const conv = filtered.filter(d => d._canMw);
+      const C = ptsG.selectAll("circle.quake").data(conv, d => d._key);
+
+      C.enter().append("circle")
+        .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
+        .attr("r", d => dataRadius(magVal(d)))
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
+        .on("mousemove", (event, d) => {
+          const [x,y] = d3.pointer(event, document.querySelector(".view"));
+          tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
+        })
+        .on("mouseleave", ()=> tooltip.style("opacity", 0));
+
+      C
+        .attr("r", d => dataRadius(magVal(d)))
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
+
+      C.exit().remove();
+
+      // Triangles for NOT convertible to Mw
+      const tri = filtered.filter(d => !d._canMw);
+      const T = ptsG.selectAll("path.quake.tri").data(tri, d => d._key);
+
+      T.enter().append("path")
+        .attr("class", d => "quake tri" + (d.depth==null ? " nodata" : ""))
+        .attr("d", d => d3.symbol().type(d3.symbolTriangle)
+            .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
+        .on("mousemove", (event, d) => {
+          const [x,y] = d3.pointer(event, document.querySelector(".view"));
+          tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
+        })
+        .on("mouseleave", ()=> tooltip.style("opacity", 0));
+
+      T
+        .attr("d", d => d3.symbol().type(d3.symbolTriangle)
+            .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("class", d => "quake tri" + (d.depth==null ? " nodata" : ""))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
+
+      T.exit().remove();
+    }catch(err){
+      console.error("Render error:", err); // keeps page alive
+    }
+  }
+
+  updateProjection();
+
+  // ---- Parse per-point timestamps & compute extent (needed for Rolling & Significant)
+  points.forEach(d => {
+    let ts = NaN;
+    if (d.time) {
+      if (/^\d{4}-\d{2}-\d{2}/.test(d.time)) {
+        ts = Date.parse(d.time);                  // ISO-like strings
+      } else if (!Number.isNaN(+d.time)) {
+        const n = +d.time; ts = (n > 1e12) ? n : n * 1000; // epoch s→ms if needed
+      } else {
+        ts = Date.parse(String(d.time));
+      }
+    }
+    d.ts = Number.isFinite(ts) ? ts : NaN;
+  });
+
+  const _tsVals = points.map(d => d.ts).filter(Number.isFinite);
+  tsExt = d3.extent(_tsVals);
+
+  // Monthly timeline support
+  points.forEach(d => { d.tsMonth = Number.isFinite(d.ts) ? monthIndexFromMs(d.ts) : NaN; });
+  const _tsMonths = points.map(d => d.tsMonth).filter(Number.isFinite);
+  tsMonthExt = d3.extent(_tsMonths);
+
+  tagSignificant(points);
+
+  drawLegend();
+  render();
+  drawInsetsTopRow();
+
+  // --- Discover the Century buttons ---
+  document.getElementById("discoverTop10").addEventListener("click", ()=> applyStory("top10"));
+  document.getElementById("discoverDeepest").addEventListener("click", ()=> applyStory("deepest"));
+  document.getElementById("discoverShallowest").addEventListener("click", ()=> applyStory("shallowest"));
+  document.getElementById("discoverRecent").addEventListener("click", ()=> applyStory("recent"));
+  document.getElementById("discoverSignificant").addEventListener("click", ()=> applyStory("significant"));
+  document.getElementById("modeDiscover").addEventListener("click", ()=> setMode("discover"));
+  document.getElementById("modeRolling").addEventListener("click",  ()=> setMode("rolling"));
+  document.getElementById("modeFull").addEventListener("click",     ()=> setMode("full"));
+  document.getElementById("rollPlay").addEventListener("click",     ()=> (rollTimer?stopRolling():startRolling()));
+  document.getElementById("rollReplay").addEventListener("click", replayRolling);
+  document.getElementById("rollSlider").addEventListener("input", (e) => {
+      rollingMon = +e.target.value;
+      document.getElementById("rollReplay").style.display =
+          (rollingMon >= tsMonthExt[1]) ? "inline-block" : "none";
+      updateRollLabel();
+      requestRepaint(); // will also call updateRollingFeed()
+  });
+
+
+  // // --- Magnitude normalization toggle ---
+  // document.getElementById("useMw").addEventListener("change", () => {
+  //   clearStory();            // exit story mode if active
+  //   requestRepaint();        // repaint with/without normalization
+  // });
+
+  // --- Magnitude normalization toggle (guard on uncheck) ---
+  document.getElementById("useMw").addEventListener("change", (e) => {
+    // If turning OFF normalization, double confirm
+    if (!e.target.checked){
+      const ok = confirm(
+        "Experimental: Turning OFF Mw normalization may reduce comparability across events.\n\n" +
+        "Proceed and show original reported scales?"
+      );
+      if (!ok){ e.target.checked = true; return; }
+    }
+    clearStory();
+    requestRepaint();
+  });
+
+  // --- Hide non-Mw (unconverted) data (default ON). Guard when turning it OFF (i.e., showing non-Mw).
+  document.getElementById("hideUnconverted").addEventListener("change", (e) => {
+    if (!e.target.checked){
+      const ok = confirm(
+        "Experimental: Showing non-Mw (unconverted) data mixes different magnitude scales.\n" +
+        "The plot may be less comparable across events.\n\nProceed?"
+      );
+      if (!ok){ e.target.checked = true; return; }
+    }
+    clearStory();
+    requestRepaint();
+  });
+
+
+  // Default landing state: Top 10 highlighted, but keep sliders at full ranges
+  applyStory("top10", { syncUI: false });
+
+  // ----- Reset Filters Button Logic -----
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    clearStory();
+    function resetDual(minRangeId, maxRangeId, minNumId, maxNumId, minVal, maxVal) {
+      const loR = document.getElementById(minRangeId);
+      const hiR = document.getElementById(maxRangeId);
+      const loN = document.getElementById(minNumId);
+      const hiN = document.getElementById(maxNumId);
+      loR.value = minVal; hiR.value = maxVal;
+      loN.value = minVal; hiN.value = maxVal;
+      hiR.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    resetDual('magMinR', 'magMaxR', 'magMinN', 'magMaxN',
+              sizeScale.domain()[0], sizeScale.domain()[1]);
+
+    resetDual('depthMinR', 'depthMaxR', 'depthMinN', 'depthMaxN',
+              color.domain()[0], color.domain()[1]);
+
+    resetDual('yearMinR', 'yearMaxR', 'yearMinN', 'yearMaxN',
+              yearExt[0], yearExt[1]);
+
+    d3.select("#includeNA").property("checked", true);
+
+    d3.select("#locInput").property("value", "");
+    if (typeof selectedLocs !== "undefined") {
+      selectedLocs.clear();
+      if (typeof renderChips === "function") renderChips();
+    }
+
+    d3.select("#useMw").property("checked", true);
+    d3.select("#hideUnconverted").property("checked", true);
+
+    requestRepaint();
+  });
+
+  /* ---------- Discover info side popup ---------- */
+  (function(){
+    const introBtn      = document.getElementById("discoverIntroBtn");
+    const introStoryBtn = document.getElementById("discoverTop10");
+    const panel         = document.getElementById("discoverInfoPanel");
+    const closeBtn      = document.getElementById("discoverInfoClose");
+    const viewEl        = document.querySelector(".view");
+
+    if (!panel) return;
+
+    function openPanel(){
+      // Ensure we’re in Discover mode when opening
+      if (document.body.dataset.mode !== "discover"){
+        setMode("discover");
+      }
+      panel.classList.add("open");
+    }
+
+    function closePanel(){
+      panel.classList.remove("open");
+    }
+
+    if (introBtn){
+      introBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        openPanel();
+      });
+    }
+
+    if (introStoryBtn){
+      introStoryBtn.addEventListener("click", () => {
+        // Story logic (applyStory) is already wired elsewhere;
+        // we just show the info panel on top.
+        panel.classList.add("open");
+      });
+    }
+
+    if (closeBtn){
+      closeBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        closePanel();
+      });
+    }
+
+    // Clicking anywhere in the map view (but outside the panel) closes it
+    if (viewEl){
+      viewEl.addEventListener("click", (e)=>{
+        if (!panel.classList.contains("open")) return;
+        if (!panel.contains(e.target)) closePanel();
+      });
+    }
+  })();
+
+  /* ---------- Zoom ---------- */
+  const zoom = d3.zoom().scaleExtent([0.9, 8]).on("zoom", (ev)=>{
+    currK = ev.transform.k;
+    zoomLayer.attr("transform", ev.transform);
+    // Update radii so small dots keep the minimum screen size at every zoom
+    ptsG.selectAll("circle.quake").attr("r", d => dataRadius(magVal(d), currK));
+    ptsG.selectAll("path.quake.tri").attr("d", d => d3.symbol().type(d3.symbolTriangle)
+        .size(Math.PI * Math.pow(dataRadius(magVal(d), currK), 2))());
+  });
+
+  svg.call(zoom).on("click", (e)=>{
+    if (e.target === svg.node()) svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+  });
+
+  document.getElementById("includeNA").addEventListener("change", requestRepaint);
+})();
+</script>
+</body>
+</html>
