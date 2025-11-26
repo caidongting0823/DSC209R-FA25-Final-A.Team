@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project 3 Write‑Up — Group 7 — A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</title>
+  <meta name="description" content="Design rationale and development process for Group 7's Project 3 interactive map of U.S. earthquakes (1925–2025)." />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --panel:#ffffff;
+      --grid:#e5e7eb;
+      --accent:#2563eb;
+      --accent-2:#10b981;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0b0e14;
+        --ink:#e8eef7;
+        --muted:#9fb0c6;
+        --panel:#0f141c;
+        --grid:#243142;
+        --accent:#3b82f6;
+        --accent-2:#34d399;
+      }
+    }
+    *{ box-sizing: border-box }
+    html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
+    .wrap{ max-width:1100px; margin:28px auto 80px; padding:0 16px }
+    header{
+      background:linear-gradient(120deg, rgba(37,99,235,.06), rgba(16,185,129,.05));
+      border:1px solid var(--grid); border-radius:16px;
+      padding:18px; margin-bottom:16px
+    }
+    h1,h2,h3{ line-height:1.2; margin:.2em 0 .45em }
+    h1{ font-size:1.75rem }
+    h2{ font-size:1.25rem; margin-top:1.2rem }
+    h3{ font-size:1.05rem; color:var(--muted) }
+    a{ color:var(--accent); text-decoration:none } a:hover{ text-decoration:underline }
+    .sub{ color:var(--muted); font-size:.95rem }
+    .meta{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:6px; margin-top:6px }
+    .badge{ display:inline-block; padding:2px 10px; border-radius:999px; background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.25); color:var(--ink) }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px }
+    @media (max-width:880px){ .grid{ grid-template-columns:1fr } }
+    .card{ background:var(--panel); border:1px solid var(--grid); border-radius:12px; padding:16px }
+    .callout{ border-left:4px solid var(--accent-2); background:rgba(16,185,129,.06); padding:8px 12px; border-radius:8px }
+    .nav{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px }
+    .nav a{ display:inline-block; padding:6px 10px; border:1px solid var(--grid); border-radius:8px; background:var(--panel) }
+    code, .code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace }
+    ul.tight > li{ margin-bottom:6px }
+    footer{ margin-top:28px; color:var(--muted); font-size:.92rem }
+    .iframe-box{ aspect-ratio: 16/9; border:1px dashed var(--grid); border-radius:12px; overflow:hidden; background:rgba(0,0,0,.03) }
+    iframe{ width:100%; height:100%; border:0 }
+    .small{ font-size:.92rem; color:var(--muted) }
+    .hr{ border:none; border-top:1px dashed var(--grid); margin:18px 0 }
+    .tbl{ width:100%; border-collapse:collapse; }
+    .tbl th,.tbl td{ border:1px solid var(--grid); padding:8px 10px; vertical-align:top }
+    .tbl th{ background:rgba(37,99,235,.06); text-align:left }
+    .pill{ display:inline-block; padding:2px 8px; border:1px solid var(--grid); border-radius:999px; font-size:.85rem; color:var(--muted) }
+    .todo{ background: rgba(255,183,3,.12); border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Final Project <em>How the 1989 Loma Prieta Earthquake Unfolded</em></h1>
+      <div class="meta">
+        <div><span class="badge">Group / A Team</span> Dongting Cai, Chiu‑Chiu (Jojo) Lin, Albab Newaz</div>
+        <div><span class="badge">Course</span> DSC 209R, Fall 2025</div>
+      </div>
+    </header>
+
+    <section id="live-viz" class="card">
+      <h2>Live Demo</h2>
+      <p>
+        <strong><a href="https://caidongting0823.github.io/DSC209R-FA25-Final-A.Team/prototype/prototype.html">
+            Click to Live Visualization Demo</a></strong>
+      </p>
+    </section>
+
+    <section id="rationale" class="card">
+      <h2>1. What have you done so far?</h2>
+        So far, we have built an explorable explanation called “History in Motion – 1989 Loma Prieta Earthquake” that
+        focuses on the foreshocks, main shock, and aftershocks of the 1989 Loma Prieta event using the USGS earthquake
+        catalog (the same `us_earthquakes_m4.5_cleaned.csv` dataset from Project 3, filtered to 1989–1990 in the
+        conterminous US).  Our current prototype uses a two-column scrollytelling layout: narrative “chapters” on
+        the left (“Foreshocks,” “Main Shock,” “Aftershocks,” and “Rebuilding”) and a sticky map panel on the right
+        that stays fixed while the user scrolls.  The map panel shows a D3 Albers USA map with earthquakes encoded
+        as circles whose size reflects magnitude and whose styling highlights the Loma Prieta main shock, along with
+        tooltips that reveal place, magnitude, and time on hover.  We have also implemented a time slider and
+        play/pause controls that animate the sequence from April 1989 to April 1990, plus a mini-timeline area
+        chart showing the daily count of earthquakes, with a moving cursor tied to the slider.
+        Finally, we connected the narrative and the visualization: entering each chapter automatically moves
+        the slider to a relevant point in time (e.g., foreshocks, main shock day, aftershock period), so the story
+        text and the evolving seismic pattern stay in sync.
+    </section>
+
+    <section id="process" class="card">
+      <h2>2. What will be the most challenging part of your project to design, and why?</h2>
+        The most challenging part will be designing the narrative and interactions so that they form a clear,
+        compelling story rather than just a set of “cool” features. Based on the final project rubric, we need to
+        follow a strong story structure (e.g., and–but–therefore), provide meaningful annotations, and end with a
+        memorable takeaway, so we must carefully decide which moments in the Loma Prieta sequence to emphasize and
+        how to visually highlight them.  It will also be difficult to balance guided scrollytelling with open
+        exploration: users should be able to play through the timeline, scrub to specific days, or jump via the
+        chapters without getting lost or confused about “where” they are in the sequence. On the visualization side,
+        we need to refine our encodings and interactions so that patterns in foreshocks and aftershocks are legible
+        without overplotting, while still keeping the design clean and readable on a typical laptop screen.
+        Finally, integrating additional context (such as damage, infrastructure failures, or policy changes) as
+        overlays or annotations—without cluttering the map or overwhelming viewers with text—will require careful
+        iterative design and testing.
+    </section>
+
+    <footer>
+      <div>Final Project, Group A Team / Last updated: Nov 21, 2025</div>
+    </footer>
+  </div>
+</body>
+</html>
