@@ -28,16 +28,22 @@
       background: var(--bg);
     }
 
+    /* Allow scroll on all devices */
     body {
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* Fullscreen hero container */
     .hero {
       position: relative;
       width: 100%;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh; /* can grow taller than viewport */
+      overflow: visible;
+      /* Fallback static image if video fails / is subtle */
+      background:
+        linear-gradient(to bottom right, rgba(5,8,20,0.9), rgba(5,8,20,0.9)),
+        url("hero_still.jpg") center / cover no-repeat fixed;
+      /* If you don't have hero_still.jpg yet, this still works: just a dark gradient */
     }
 
     /* Background video */
@@ -47,8 +53,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      filter: blur(4px) brightness(0.4);
-      transform: scale(1.05); /* avoid edge artifacts from blur */
+      filter: blur(2px) brightness(0.85);
+      transform: scale(1.05);
       z-index: -2;
     }
 
@@ -56,8 +62,8 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(circle at top left, rgba(122,162,255,0.35), transparent 55%),
-        linear-gradient(to bottom right, rgba(5,8,20,0.9), rgba(5,8,20,0.9));
+        radial-gradient(circle at top left, rgba(122,162,255,0.25), transparent 55%),
+        linear-gradient(to bottom right, rgba(5,8,20,0.5), rgba(5,8,20,0.75));
       z-index: -1;
     }
 
@@ -209,13 +215,6 @@
     }
 
     @media (max-width: 720px) {
-      body {
-        overflow-y: auto;
-      }
-      .hero {
-        height: auto;
-        min-height: 100vh;
-      }
       .hero-inner {
         padding: 24px 18px 36px;
       }
@@ -224,18 +223,17 @@
 </head>
 <body>
   <section class="hero">
-    <!-- Background video: replace VIDEO_PLACEHOLDER.mp4 with your real file -->
+    <!-- Background video: make sure background.mp4 is in the same /final folder -->
     <video
       class="hero-video"
       autoplay
       muted
       loop
       playsinline
-      poster=""
+      preload="auto"
     >
-      <source src="VIDEO_PLACEHOLDER.mp4" type="video/mp4" />
-      <!-- Fallback text -->
-      Your browser does not support the video tag.
+      <source src="background.mp4" type="video/mp4" />
+      <!-- If the browser can't play the video, it will fall back to the static background image -->
     </video>
 
     <!-- Dark / color overlay on top of video -->
