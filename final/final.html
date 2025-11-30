@@ -6,7 +6,7 @@
   <title>Loma Prieta in Motion – DSC 209R Final Project</title>
   <style>
     :root {
-      --bg: #0b1020;
+      --bg: #050816;
       --panel: #11182e;
       --ink: #e6ebff;
       --muted: #9fb2ff;
@@ -22,45 +22,49 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background: radial-gradient(circle at top left, #1b2550 0, #050816 55%);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+        "Helvetica Neue", Arial, sans-serif;
       color: var(--ink);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
     }
 
     body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .frame {
-      max-width: 820px;
-      width: 100%;
-      background: linear-gradient(135deg, rgba(17,24,46,0.96), rgba(5,9,20,0.98));
-      border-radius: 20px;
-      padding: 32px 32px 28px;
-      box-shadow:
-        0 30px 80px rgba(0,0,0,0.65),
-        0 0 0 1px rgba(154, 179, 255, 0.18);
-      position: relative;
       overflow: hidden;
     }
 
-    .frame::before {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background:
-        radial-gradient(circle at 0% 0%, rgba(122,162,255,0.18), transparent 55%),
-        radial-gradient(circle at 90% 100%, rgba(163,255,205,0.12), transparent 55%);
-      z-index: 0;
-      opacity: 0.9;
+    /* Fullscreen hero container */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    .content {
-      position: relative;
-      z-index: 1;
+    /* Background video */
+    .hero-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(4px) brightness(0.4);
+      transform: scale(1.05); /* avoid edge artifacts from blur */
+      z-index: -2;
+    }
+
+    .hero-overlay {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at top left, rgba(122,162,255,0.35), transparent 55%),
+        linear-gradient(to bottom right, rgba(5,8,20,0.9), rgba(5,8,20,0.9));
+      z-index: -1;
+    }
+
+    /* Content block top-left */
+    .hero-inner {
+      max-width: 720px;
+      padding: 32px 5vw 40px;
     }
 
     .badge-row {
@@ -83,22 +87,25 @@
     }
 
     h1 {
-      margin: 0 0 0.4rem;
-      font-size: clamp(2rem, 3vw, 2.6rem);
+      margin: 0 0 0.5rem;
+      font-size: clamp(2.2rem, 3.4vw, 2.8rem);
+      text-shadow: 0 10px 24px rgba(0,0,0,0.8);
     }
 
     .subtitle {
       font-size: 1.02rem;
       color: var(--muted);
-      max-width: 640px;
-      margin: 0 0 1rem;
+      max-width: 580px;
+      margin: 0 0 0.9rem;
+      text-shadow: 0 8px 18px rgba(0,0,0,0.8);
     }
 
     .lede {
       font-size: 0.96rem;
-      color: rgba(230,235,255,0.8);
-      max-width: 640px;
+      color: rgba(230,235,255,0.9);
+      max-width: 600px;
       margin: 0 0 1.6rem;
+      text-shadow: 0 8px 18px rgba(0,0,0,0.9);
     }
 
     .lede strong {
@@ -106,44 +113,34 @@
       font-weight: 600;
     }
 
-    .mode-grid {
+    /* Mode summary row (small, under text) */
+    .mode-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 16px;
-      margin-top: 1.2rem;
-      margin-bottom: 1.8rem;
-    }
-
-    .mode-card {
-      flex: 1 1 220px;
-      min-width: 0;
-      border-radius: 14px;
-      padding: 12px 14px;
-      border: 1px solid rgba(122,162,255,0.45);
-      background: radial-gradient(circle at top left, rgba(122,162,255,0.12), rgba(5,8,20,0.95));
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .mode-card h3 {
-      margin: 0;
-      font-size: 0.92rem;
-    }
-
-    .mode-card p {
-      margin: 0;
+      gap: 12px;
+      margin-bottom: 1.7rem;
       font-size: 0.82rem;
-      color: rgba(230,235,255,0.8);
     }
 
-    .mode-tag {
-      font-size: 0.72rem;
+    .mode-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(5,10,32,0.85);
+      border: 1px solid rgba(122,162,255,0.6);
+      color: rgba(230,235,255,0.9);
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+    }
+
+    .mode-pill span.tag {
       text-transform: uppercase;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.16em;
+      font-size: 0.7rem;
       color: var(--muted);
+      margin-right: 6px;
     }
 
+    /* Buttons */
     .cta-row {
       display: flex;
       flex-wrap: wrap;
@@ -155,20 +152,21 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 9px 18px;
+      padding: 10px 20px;
       border-radius: 999px;
       font-size: 0.9rem;
       text-decoration: none;
       border: 1px solid transparent;
       cursor: pointer;
       white-space: nowrap;
+      backdrop-filter: blur(6px);
     }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--accent), #a0b8ff);
       color: #050816;
       font-weight: 600;
-      box-shadow: 0 12px 24px rgba(17, 22, 46, 0.65);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.8);
     }
 
     .btn-primary span.icon {
@@ -177,9 +175,9 @@
     }
 
     .btn-ghost {
-      border-color: rgba(159,178,255,0.5);
+      border-color: rgba(159,178,255,0.6);
       color: var(--muted);
-      background: rgba(3,10,28,0.2);
+      background: rgba(3,10,28,0.4);
     }
 
     .btn-ghost.disabled {
@@ -188,12 +186,13 @@
     }
 
     .meta {
-      margin-top: 1.1rem;
+      margin-top: 1.4rem;
       font-size: 0.78rem;
-      color: rgba(159,178,255,0.85);
+      color: rgba(187,198,255,0.9);
       display: flex;
       flex-wrap: wrap;
       gap: 10px 18px;
+      text-shadow: 0 8px 18px rgba(0,0,0,0.9);
     }
 
     .meta span {
@@ -210,18 +209,40 @@
     }
 
     @media (max-width: 720px) {
-      .frame {
-        padding: 24px 18px 22px;
+      body {
+        overflow-y: auto;
       }
-      .mode-grid {
-        flex-direction: column;
+      .hero {
+        height: auto;
+        min-height: 100vh;
+      }
+      .hero-inner {
+        padding: 24px 18px 36px;
       }
     }
   </style>
 </head>
 <body>
-  <main class="frame">
-    <div class="content">
+  <section class="hero">
+    <!-- Background video: replace VIDEO_PLACEHOLDER.mp4 with your real file -->
+    <video
+      class="hero-video"
+      autoplay
+      muted
+      loop
+      playsinline
+      poster=""
+    >
+      <source src="VIDEO_PLACEHOLDER.mp4" type="video/mp4" />
+      <!-- Fallback text -->
+      Your browser does not support the video tag.
+    </video>
+
+    <!-- Dark / color overlay on top of video -->
+    <div class="hero-overlay"></div>
+
+    <!-- Text content in top-left -->
+    <div class="hero-inner">
       <div class="badge-row">
         <div class="badge-pill">DSC 209R · Final Project</div>
         <span>History in Motion</span>
@@ -229,31 +250,21 @@
 
       <h1>1989 Loma Prieta Earthquake</h1>
       <p class="subtitle">
-        A scrollable, data-driven look at how one evening in October 1989 reshaped the Bay Area.
+        A data-driven look at how one evening in October 1989 reshaped the Bay Area.
       </p>
       <p class="lede">
-        This project combines <strong>USGS earthquake records</strong>, <strong>interactive maps</strong>, and
-        <strong>historical media</strong> to trace the months of foreshocks, the 6.9 main shock,
+        This project combines <strong>USGS earthquake records</strong>, <strong>interactive maps</strong>,
+        and <strong>historical media</strong> to trace the months of foreshocks, the 6.9 main shock,
         and the long tail of aftershocks that followed.
       </p>
 
-      <div class="mode-grid">
-        <section class="mode-card">
-          <div class="mode-tag">Mode 1 · Story</div>
-          <h3>Guided Story Mode</h3>
-          <p>
-            Walk through the sequence like a museum tour: foreshocks, main shock, aftershocks, and rebuilding,
-            synchronized with an animated map of the Bay Area.
-          </p>
-        </section>
-
-        <section class="mode-card">
-          <div class="mode-tag">Mode 2 · Explore</div>
-          <h3>Data Explorer <span style="font-weight:400; color: var(--muted);">(coming soon)</span></h3>
-          <p>
-            Filter by magnitude, time, and location to explore patterns in the Loma Prieta sequence on your own.
-          </p>
-        </section>
+      <div class="mode-row">
+        <div class="mode-pill">
+          <span class="tag">Mode 1</span>Guided Story (interactive timeline)
+        </div>
+        <div class="mode-pill" style="opacity:0.7;">
+          <span class="tag">Mode 2</span>Data Explorer · coming soon
+        </div>
       </div>
 
       <div class="cta-row">
@@ -272,6 +283,6 @@
         <span>Data: USGS, 1988–1990 events near Loma Prieta.</span>
       </div>
     </div>
-  </main>
+  </section>
 </body>
 </html>
