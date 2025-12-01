@@ -4,45 +4,59 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>History in Motion – 1989 Loma Prieta Earthquake</title>
-  <!-- D3.js and TopoJSON libraries -->
+
+  <!-- D3.js and TopoJSON -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+  <!-- Fraunces for headings / “museum” labels -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+    rel="stylesheet"
+  >
+
   <style>
-    /* Color palette and base styles */
     :root {
-      --bg: #0b1020;          /* page background (dark navy) */
-      --panel: #11182e;       /* panel background (slightly lighter navy) */
-      --ink: #e6ebff;         /* primary text (light bluish-white) */
-      --muted: #9fb2ff;       /* secondary text / muted (desaturated light blue) */
-      --accent: #7aa2ff;      /* accent color (medium light blue) */
-      --accent2: #a3ffcd;     /* second accent (soft green) */
+      --bg: #0b1020;
+      --panel: #11182e;
+      --ink: #e6ebff;
+      --muted: #9fb2ff;
+      --accent: #7aa2ff;
+      --accent2: #a3ffcd;
     }
+
     html, body {
       margin: 0;
       height: 100%;
       background: var(--bg);
       color: var(--ink);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+        "Helvetica Neue", Arial, sans-serif;
       line-height: 1.5;
       overflow-x: hidden;
     }
 
-    /* Header with hook + motivation */
+    /* Header */
     .site-header {
-      padding: 20px 6vw 14px;
+      padding: 20px 6vw 12px;
       background: radial-gradient(circle at top left, #1b2550 0, #050816 55%);
       border-bottom: 1px solid rgba(154, 179, 255, 0.25);
     }
     .site-header .eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.16em;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--accent2);
       margin-bottom: 0.35rem;
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
     }
     .site-header h1 {
       margin: 0 0 0.4rem;
       font-size: clamp(1.9rem, 3vw, 2.4rem);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      letter-spacing: 0.02em;
     }
     .site-header .tagline {
       margin: 0 0 0.2rem;
@@ -56,78 +70,45 @@
       max-width: 720px;
       font-size: 0.9rem;
     }
-
-    /* Layout: two-column scrollytelling (text left, map right) */
-    .scrolly-container {
-      display: flex;
-      position: relative;
-    }
-    .text-panel {
-      width: 35%;
-      min-width: 300px;
-      padding: 0;
-    }
-    .map-panel {
-      width: 65%;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      background: var(--bg);
-      overflow: hidden;
-    }
-
-    /* Chapter sections */
-    .chapter {
-      height: 100vh;
-      padding: 15vh 5vw 10vh 6vw;
-      box-sizing: border-box;
-      transition: background 0.3s ease, box-shadow 0.3s ease;
-    }
-    .chapter h2 {
-      font-size: 2rem;
-      margin: 0 0 1em;
-      transition: color 0.3s ease;
-    }
-    .chapter p {
-      font-size: 1rem;
-      margin: 0 0 1.5em;
-      max-width: 600px;
-    }
-    .chapter.active {
-      background: radial-gradient(circle at top left, rgba(122,162,255,0.12), transparent 60%);
-      box-shadow: inset 3px 0 0 rgba(163,255,205,0.7);
-    }
-    .chapter.active h2 {
+    .site-header a.back-link {
       color: var(--accent2);
+      text-decoration: none;
+      font-size: 0.85rem;
     }
 
-    /* Media placeholder (for future images/videos with captions) */
-    .chapter figure {
-      margin: 0;
-      max-width: 600px;
-      background: #0d1326;
-      border: 1px dashed rgba(163, 255, 205, 0.35);
-      border-radius: 8px;
-      padding: 0;
-    }
-    .chapter figure .media-placeholder-box {
-      width: 100%;
-      aspect-ratio: 16/9;
-      background: #050816;
-    }
-    .chapter figcaption {
-      font-size: 0.9rem;
-      color: var(--muted);
-      padding: 8px 10px;
+    /* Overall story layout */
+    .story-layout {
+      padding: 18px 6vw 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
-    /* Map SVG and geographical features */
+    .top-row {
+      display: grid;
+      grid-template-columns: minmax(320px, 58%) minmax(260px, 42%);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    /* Map panel (top-left) */
+    .map-panel {
+      position: relative;
+      background: radial-gradient(circle at top left, #161f3e 0, #050816 60%);
+      border-radius: 18px;
+      overflow: hidden;
+      height: 60vh;
+      min-height: 360px;
+      box-shadow: 0 22px 40px rgba(0, 0, 0, 0.7);
+    }
+
     #mapSvg {
       width: 100%;
       height: 100%;
       display: block;
-      background: var(--bg);
+      background: transparent;
     }
+
     path.state {
       fill: var(--panel);
       stroke: rgba(122, 162, 255, 0.2);
@@ -150,10 +131,10 @@
       stroke-width: 2px;
     }
 
-    /* HUD overlay on map */
+    /* HUD over map */
     .hud {
       position: absolute;
-      top: 16px;
+      top: 14px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(10, 16, 37, 0.9);
@@ -175,16 +156,116 @@
       font-size: 0.72rem;
     }
 
-    /* Mini timeline chart above slider */
+    /* Stage info panel (top-right) */
+    .stage-panel {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 18px 20px 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stage-kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+    .stage-panel h2 {
+      margin: 0;
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.03em;
+    }
+    .stage-panel p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: rgba(230, 235, 255, 0.95);
+    }
+    .stage-meta {
+      margin: 6px 0 10px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+    .stage-meta-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+    .stage-meta-row dt {
+      font-weight: 600;
+      min-width: 110px;
+      color: rgba(230, 235, 255, 0.9);
+    }
+    .stage-meta-row dd {
+      margin: 0;
+    }
+
+    .stage-legend-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: rgba(159, 178, 255, 0.9);
+      margin-bottom: 5px;
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+
+    .stage-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .stage-marker {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(159, 178, 255, 0.6);
+      background: rgba(4, 10, 30, 0.8);
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+    .stage-marker.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(11, 19, 52, 0.95);
+      box-shadow: 0 0 0 1px rgba(163, 255, 205, 0.4);
+    }
+
+    /* Bottom region: timeline + media strip */
+    .bottom-row {
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .timeline-region {
+      background: rgba(5, 8, 22, 0.94);
+      border-radius: 14px;
+      padding: 8px 16px 12px;
+      border: 1px solid rgba(122, 162, 255, 0.35);
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .timeline-title {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(159, 178, 255, 0.9);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+
     .mini-timeline {
-      position: absolute;
-      bottom: 64px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(86%, 900px);
+      width: 100%;
       height: 46px;
       pointer-events: none;
-      z-index: 4;
     }
     .mini-timeline svg {
       width: 100%;
@@ -196,31 +277,21 @@
       stroke-width: 2px;
     }
 
-    /* Timeline controls (slider and play button) */
     .timeline-controls {
-      position: absolute;
-      bottom: 22px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(86%, 900px);
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
       pointer-events: auto;
-      z-index: 5;
     }
     .timeline-controls button {
       background: var(--panel);
       color: var(--ink);
       border: 1px solid var(--accent);
       border-radius: 4px;
-      font-size: 16px;
+      font-size: 15px;
       padding: 4px 8px;
       cursor: pointer;
-    }
-    .timeline-controls button:focus {
-      outline: none;
     }
     .timeline-controls input[type="range"] {
       -webkit-appearance: none;
@@ -229,9 +300,6 @@
       background: var(--muted);
       cursor: pointer;
       margin: 0;
-    }
-    .timeline-controls input[type="range"]:focus {
-      outline: none;
     }
     .timeline-controls input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
@@ -253,7 +321,53 @@
       cursor: pointer;
     }
 
-    /* Tooltip for quake hover */
+    .media-strip {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 4px 2px 4px;
+      scrollbar-color: rgba(122, 162, 255, 0.6) transparent;
+    }
+    .media-card {
+      min-width: 210px;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid rgba(122, 162, 255, 0.3);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .media-card.active {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 1px rgba(163, 255, 205, 0.4), 0 14px 28px rgba(0, 0, 0, 0.8);
+    }
+    .media-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #020617;
+    }
+    .media-meta {
+      padding: 6px 8px 8px;
+    }
+    .media-title {
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .media-stage-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .media-caption {
+      font-size: 0.8rem;
+      color: rgba(212, 219, 255, 0.9);
+    }
+
+    /* Tooltip */
     .tooltip {
       position: fixed;
       pointer-events: none;
@@ -276,25 +390,13 @@
       color: var(--muted);
     }
 
-    /* Responsive layout tweaks */
+    /* Responsive */
     @media (max-width: 900px) {
-      .scrolly-container {
-        flex-direction: column;
-      }
-      .text-panel, .map-panel {
-        width: 100%;
+      .top-row {
+        grid-template-columns: 1fr;
       }
       .map-panel {
-        position: relative;
-        height: 60vh;
-      }
-      .chapter {
-        height: auto;
-        min-height: 85vh;
-        padding-top: 10vh;
-      }
-      .hud {
-        top: 8px;
+        height: 50vh;
       }
     }
   </style>
@@ -304,125 +406,148 @@
     <div class="eyebrow">History in Motion</div>
     <h1>How the 1989 Loma Prieta Earthquake Unfolded</h1>
     <p class="tagline">
-      Follow the months of foreshocks, the violent main shock, and the long tail of aftershocks as they ripple across California.
+      Watch the sequence of foreshocks, the 6.9 main shock, and months of aftershocks play out on the map while the stage
+      information and media update in real time.
     </p>
     <p class="subtag">
-      As you scroll, the story on the left and the map on the right stay in sync, letting you explore how time, location, and magnitude
-      come together in a single seismic event.
+      Use the time slider to scrub through the year-long sequence, or let the animation play from the main shock onward.
     </p>
-
     <p class="subtag">
-      <a href="final.html" style="
-          color: var(--accent2);
-          text-decoration: none;
-          font-size: 0.85rem;
-        ">
-        ← Back to project overview
-      </a>
+      <a href="final.html" class="back-link">← Back to project overview</a>
     </p>
-
   </header>
 
-  <div class="scrolly-container">
-    <!-- Textual story panels -->
-    <div class="text-panel">
-      <section id="foreshocks" class="chapter active">
-        <h2>Foreshocks</h2>
-        <p>
+  <main class="story-layout">
+    <div class="top-row">
+      <!-- Map (top-left) -->
+      <div id="map-panel" class="map-panel">
+        <div class="hud">
+          <div>
+            <span class="label-title">Date</span>
+            <span id="currentDateLabel">Loading…</span>
+          </div>
+          <div>
+            <span class="label-title">Shown</span>
+            <span id="eventCountLabel">0 earthquakes</span>
+          </div>
+        </div>
+        <svg id="mapSvg"></svg>
+      </div>
+
+      <!-- Stage info (top-right) -->
+      <aside class="stage-panel">
+        <div class="stage-kicker">Stage overview</div>
+        <h2 id="stageTitle">Foreshocks</h2>
+        <p id="stageBlurb">
           In the months leading up to the Loma Prieta earthquake, a handful of smaller tremors rattled the region.
-          To most residents they felt like ordinary California “little quakes,” but in hindsight they were hints of the
-          stress building along the San Andreas Fault.
+          To most residents they felt like routine “little quakes”, but in hindsight they were early signs of stress
+          building along the San Andreas Fault.
         </p>
-        <figure>
-          <div class="media-placeholder-box"></div>
-          <figcaption>Placeholder for foreshock-related media or annotations.</figcaption>
-        </figure>
-      </section>
 
-      <section id="mainshock" class="chapter">
-        <h2>Main Shock</h2>
-        <p>
-          On October 17, 1989, at 5:04 pm local time, the Loma Prieta earthquake struck with a magnitude of 6.9.
-          The shaking was strong enough to disrupt the World Series broadcast, collapse sections of freeway,
-          and cause widespread damage across the Bay Area.
-        </p>
-        <figure>
-          <div class="media-placeholder-box"></div>
-          <figcaption>Placeholder for main shock media (e.g., damage photos or seismogram).</figcaption>
-        </figure>
-      </section>
+        <dl class="stage-meta">
+          <div class="stage-meta-row">
+            <dt>Time window</dt>
+            <dd id="stageWindow">—</dd>
+          </div>
+          <div class="stage-meta-row">
+            <dt>Typical magnitude</dt>
+            <dd id="stageMag">—</dd>
+          </div>
+          <div class="stage-meta-row">
+            <dt>Focus</dt>
+            <dd id="stageFocus">—</dd>
+          </div>
+        </dl>
 
-      <section id="aftershocks" class="chapter">
-        <h2>Aftershocks</h2>
-        <p>
-          In the hours and days that followed, dozens of aftershocks rippled through the region. Most were smaller,
-          but together they paint a picture of how the fault adjusted after the main slip — a fading echo of the
-          moment when the fault finally gave way.
-        </p>
-        <figure>
-          <div class="media-placeholder-box"></div>
-          <figcaption>Placeholder for aftershocks media or charts.</figcaption>
-        </figure>
-      </section>
-
-      <section id="rebuilding" class="chapter">
-        <h2>Rebuilding</h2>
-        <p>
-          Once the seismic sequence calmed, attention shifted to inspection, repair, and redesign.
-          The Loma Prieta earthquake helped prompt changes in building codes and a renewed emphasis on
-          retrofitting vulnerable infrastructure around the Bay Area.
-        </p>
-        <figure>
-          <div class="media-placeholder-box"></div>
-          <figcaption>Placeholder for rebuilding-era media (e.g., reconstruction photos or policy timelines).</figcaption>
-        </figure>
-      </section>
+        <div class="stage-legend-label">Sequence</div>
+        <div class="stage-legend">
+          <button class="stage-marker active" data-stage="foreshocks">Foreshocks</button>
+          <button class="stage-marker" data-stage="mainshock">Main shock</button>
+          <button class="stage-marker" data-stage="aftershocks">Aftershocks</button>
+          <button class="stage-marker" data-stage="rebuilding">Rebuilding</button>
+        </div>
+      </aside>
     </div>
 
-    <!-- Map panel (fixed/sticky on desktop) -->
-    <div id="map-panel" class="map-panel">
-      <!-- HUD overlay -->
-      <div class="hud">
-        <div>
-          <span class="label-title">Date</span>
-          <span id="currentDateLabel">Loading…</span>
+    <div class="bottom-row">
+      <!-- Timeline + controls (bottom top) -->
+      <div class="timeline-region">
+        <div class="timeline-title">Seismic activity over time</div>
+        <div class="mini-timeline">
+          <svg id="miniTimelineSvg"></svg>
         </div>
-        <div>
-          <span class="label-title">Shown</span>
-          <span id="eventCountLabel">0 earthquakes</span>
+        <div class="timeline-controls">
+          <button id="playPause" title="Play/Pause Timeline">▶</button>
+          <input id="timeSlider" type="range" min="0" step="1" value="0" />
         </div>
       </div>
 
-      <!-- Mini timeline chart -->
-      <div class="mini-timeline">
-        <svg id="miniTimelineSvg"></svg>
-      </div>
+      <!-- Media strip (bottom bottom) -->
+      <div class="media-strip" id="mediaStrip">
+        <div class="media-card active" data-stage="foreshocks">
+          <div class="media-thumb"></div>
+          <div class="media-meta">
+            <div class="media-stage-label">Foreshocks</div>
+            <div class="media-title">Early tremors</div>
+            <div class="media-caption">
+              Placeholder for photos, graphics, or archival headlines about smaller quakes before October 1989.
+            </div>
+          </div>
+        </div>
 
-      <!-- Map -->
-      <svg id="mapSvg"></svg>
+        <div class="media-card" data-stage="mainshock">
+          <div class="media-thumb"></div>
+          <div class="media-meta">
+            <div class="media-stage-label">Main shock</div>
+            <div class="media-title">5:04 pm, October 17</div>
+            <div class="media-caption">
+              Placeholder for freeway collapse images, the World Series broadcast interruption, or seismograms.
+            </div>
+          </div>
+        </div>
 
-      <!-- Timeline slider + play/pause -->
-      <div class="timeline-controls">
-        <button id="playPause" title="Play/Pause Timeline">▶</button>
-        <input id="timeSlider" type="range" min="0" step="1" value="0" />
+        <div class="media-card" data-stage="aftershocks">
+          <div class="media-thumb"></div>
+          <div class="media-meta">
+            <div class="media-stage-label">Aftershocks</div>
+            <div class="media-title">Echoes of the rupture</div>
+            <div class="media-caption">
+              Placeholder for aftershock maps, time-lapse plots, or news coverage of ongoing seismic activity.
+            </div>
+          </div>
+        </div>
+
+        <div class="media-card" data-stage="rebuilding">
+          <div class="media-thumb"></div>
+          <div class="media-meta">
+            <div class="media-stage-label">Rebuilding</div>
+            <div class="media-title">From damage to redesign</div>
+            <div class="media-caption">
+              Placeholder for reconstruction photos, retrofitting projects, or policy documents that followed the quake.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <script>
-    // --- Data and Map Setup ---
-    const mapPanel = document.getElementById('map-panel');
-    const width = mapPanel.clientWidth;
-    const height = mapPanel.clientHeight;
+    // --- DOM + D3 setup ---
+    const mapPanel = document.getElementById("map-panel");
+    const width = mapPanel.clientWidth || 800;
+    const height = mapPanel.clientHeight || 500;
 
-    const svg = d3.select("#mapSvg");
+    const svg = d3.select("#mapSvg")
+      .attr("width", width)
+      .attr("height", height);
+
     const projection = d3.geoAlbersUsa();
     const path = d3.geoPath(projection);
 
-    const dateLabel = document.getElementById('currentDateLabel');
-    const countLabel = document.getElementById('eventCountLabel');
-    const slider = document.getElementById('timeSlider');
-    const playButton = document.getElementById('playPause');
+    const dateLabel = document.getElementById("currentDateLabel");
+    const countLabel = document.getElementById("eventCountLabel");
+    const slider = document.getElementById("timeSlider");
+    const playButton = document.getElementById("playPause");
 
     const tooltip = d3.select("body")
       .append("div")
@@ -432,42 +557,45 @@
     const formatTime = d3.utcFormat("%b %d, %Y %H:%M UTC");
     const formatMag = d3.format(".1f");
 
-    const chapters = document.querySelectorAll('.chapter');
-    let currentChapterId = 'foreshocks';
+    // Stage panel elements
+    const stageTitleEl = document.getElementById("stageTitle");
+    const stageBlurbEl = document.getElementById("stageBlurb");
+    const stageWindowEl = document.getElementById("stageWindow");
+    const stageMagEl = document.getElementById("stageMag");
+    const stageFocusEl = document.getElementById("stageFocus");
+    const stageMarkers = document.querySelectorAll(".stage-marker");
+    const mediaCards = document.querySelectorAll(".media-card");
 
-    function setActiveChapter(id, scrollIntoView = false) {
-      if (id === currentChapterId) return;
-      currentChapterId = id;
-      chapters.forEach(sec => {
-        sec.classList.toggle('active', sec.id === id);
+    let currentStageId = "foreshocks";
+
+    function updateStageUI(stageId, STAGES) {
+      if (!STAGES[stageId]) return;
+      const s = STAGES[stageId];
+
+      currentStageId = stageId;
+      stageTitleEl.textContent = s.title;
+      stageBlurbEl.textContent = s.blurb;
+      stageWindowEl.textContent = s.window;
+      stageMagEl.textContent = s.magRange;
+      stageFocusEl.textContent = s.focus;
+
+      stageMarkers.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.stage === stageId);
       });
-      if (scrollIntoView) {
-        const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
+      mediaCards.forEach(card => {
+        card.classList.toggle("active", card.dataset.stage === stageId);
+      });
     }
 
-    // helper: choose chapter based on day index
-    function chapterForDay(dayIndex, mainshockIndex, rebuildingStart, maxDay) {
-      if (dayIndex < mainshockIndex) return 'foreshocks';
-      if (dayIndex === mainshockIndex) return 'mainshock';
-      if (dayIndex > mainshockIndex && dayIndex < rebuildingStart) return 'aftershocks';
-      return 'rebuilding';
-    }
-
-    // Load US map geometry
+    // Load US states geometry
     d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(function(usData) {
       const states = topojson.feature(usData, usData.objects.states).features;
       const usOutline = topojson.feature(usData, usData.objects.states);
 
-      // Initial fit to whole US
       projection.fitSize([width, height], usOutline);
       const initialScale = projection.scale();
       const initialTranslate = projection.translate();
 
-      // Draw states in initial view
       svg.selectAll("path.state")
         .data(states)
         .enter()
@@ -475,7 +603,7 @@
         .attr("class", "state")
         .attr("d", path);
 
-      // Load earthquake data (Loma Prieta regional dataset)
+      // Load Loma Prieta regional earthquake data
       d3.csv("../dataset/us_loma_prieta_1988_1990_allmags.csv").then(function(data) {
         const parseTime = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ");
 
@@ -509,13 +637,66 @@
           mainshockIndex = Math.floor((mainEvent.time - startDate) / msPerDay);
         }
         const rebuildingStart = Math.floor(totalDays * 0.85);
+        const aftershockStartIndex = Math.min(mainshockIndex + 1, totalDays);
 
-        // ---- Compute zoom target based on quake cloud (Bay Area region) ----
-        let targetScale = initialScale;
-        let targetTranslate = initialTranslate;
+        const foreshockEndDate = new Date(mainshockDate.getTime() - msPerDay);
+        const aftershockStartDate = new Date(mainshockDate.getTime() + msPerDay);
+        const rebuildingStartDate = new Date(startDate.getTime() + rebuildingStart * msPerDay);
 
-        if (events.length > 0) {
-          const coords = events.map(d => [d.longitude, d.latitude]);
+        // Stage metadata (drives right panel + media)
+        const STAGES = {
+          foreshocks: {
+            id: "foreshocks",
+            title: "Foreshocks",
+            blurb:
+              "In the months leading up to the main shock, a series of smaller earthquakes quietly marked the buildup of stress along the fault.",
+            window: `${formatDate(startDate)} – ${formatDate(foreshockEndDate)}`,
+            magRange: "Mostly M3–M5 events",
+            focus: "Subtle stress changes before the main slip.",
+            anchorDayIndex: 0
+          },
+          mainshock: {
+            id: "mainshock",
+            title: "Main shock – October 17, 1989",
+            blurb:
+              "At 5:04 pm local time, a magnitude 6.9 earthquake struck near Loma Prieta, disrupting the World Series, collapsing structures, and shaking the Bay Area.",
+            window: formatDate(mainshockDate),
+            magRange: "M6.9",
+            focus: "Sudden rupture along the San Andreas Fault.",
+            anchorDayIndex: mainshockIndex
+          },
+          aftershocks: {
+            id: "aftershocks",
+            title: "Aftershocks",
+            blurb:
+              "In the days and months that followed, a cloud of aftershocks traced how the fault adjusted after the main rupture.",
+            window: `${formatDate(aftershockStartDate)} – ${formatDate(rebuildingStartDate)}`,
+            magRange: "Mostly M3–M5, with occasional larger events",
+            focus: "Fault readjustment and lingering seismicity.",
+            anchorDayIndex: aftershockStartIndex
+          },
+          rebuilding: {
+            id: "rebuilding",
+            title: "Rebuilding and reflection",
+            blurb:
+              "As seismic activity tapered off, attention turned to inspection, retrofitting, and redesigning vulnerable infrastructure across the Bay Area.",
+            window: `${formatDate(rebuildingStartDate)} – ${formatDate(endDate)}`,
+            magRange: "Fewer felt events in the dataset",
+            focus: "Long-term changes to buildings, bridges, and policy.",
+            anchorDayIndex: totalDays
+          }
+        };
+
+        function stageForDay(dayIndex) {
+          if (dayIndex < mainshockIndex) return "foreshocks";
+          if (dayIndex === mainshockIndex) return "mainshock";
+          if (dayIndex > mainshockIndex && dayIndex < rebuildingStart) return "aftershocks";
+          return "rebuilding";
+        }
+
+        // Zoom to Bay Area cloud
+        const coords = events.map(d => [d.longitude, d.latitude]);
+        if (coords.length > 0) {
           const multiPoint = { type: "MultiPoint", coordinates: coords };
           const paddingX = width * 0.12;
           const paddingY = height * 0.16;
@@ -524,21 +705,21 @@
             [[paddingX, paddingY], [width - paddingX, height - paddingY]],
             multiPoint
           );
-          targetScale = projection.scale();
-          targetTranslate = projection.translate();
-
-          // reset back to US view before animating
-          projection.scale(initialScale).translate(initialTranslate);
-          svg.selectAll("path.state").attr("d", path);
         }
+        const targetScale = projection.scale();
+        const targetTranslate = projection.translate();
 
-        // Radius scale: smaller circles with sqrt scaling for better separation
+        // Reset to US view before animating zoom
+        projection.scale(initialScale).translate(initialTranslate);
+        svg.selectAll("path.state").attr("d", path);
+
+        // Radius scale
         const magExtent = d3.extent(events, d => d.mag || 4.5);
         const rScale = d3.scaleSqrt()
           .domain([Math.max(3.5, magExtent[0] || 4.0), Math.min(7.5, magExtent[1] || 7)])
           .range([1.5, 6]);
 
-        // --- Mini timeline data (quakes per day) ---
+        // Mini timeline: quakes per day
         const dayData = d3.range(totalDays + 1).map(i => ({
           dayIndex: i,
           date: new Date(startDate.getTime() + i * msPerDay),
@@ -591,7 +772,7 @@
           .attr("y1", miniMargin.top)
           .attr("y2", miniHeight - miniMargin.bottom);
 
-        // Plot earthquakes (initially hidden)
+        // Plot earthquakes
         const circles = svg.selectAll("circle.quake")
           .data(events)
           .enter()
@@ -625,7 +806,6 @@
             tooltip.style("opacity", 0);
           });
 
-        // Helper: reproject states + circles whenever projection changes (for zoom animation)
         function redrawProjection() {
           svg.selectAll("path.state").attr("d", path);
           circles
@@ -651,12 +831,13 @@
           cursor.attr("x1", x).attr("x2", x);
         }
 
-        function updateActiveForDay(dayIndex, fromSlider) {
-          const chapId = chapterForDay(dayIndex, mainshockIndex, rebuildingStart, totalDays);
-          setActiveChapter(chapId, fromSlider);
+        function updateStageForDay(dayIndex) {
+          const stageId = stageForDay(dayIndex);
+          if (stageId !== currentStageId) {
+            updateStageUI(stageId, STAGES);
+          }
         }
 
-        // Update visible earthquakes based on current day index
         function updateMapByDay(dayIndex, fromSlider = false) {
           const dayStart = new Date(startDate.getTime() + dayIndex * msPerDay);
           const dayEnd = new Date(dayStart.getTime() + msPerDay);
@@ -664,19 +845,20 @@
           const visibleEvents = events.filter(d => d.time <= dayEnd);
 
           circles
-            .attr("opacity", d => (d.time <= dayEnd ? (d === mainEvent ? 1 : 0.85) : 0.0))
+            .attr("opacity", d => d.time <= dayEnd ? (d === mainEvent ? 1 : 0.85) : 0)
             .classed("recent", d => d.time >= dayStart && d.time < dayEnd);
 
           updateHUD(dayIndex, visibleEvents.length);
           updateTimelineCursor(dayIndex);
-          updateActiveForDay(dayIndex, fromSlider);
+          updateStageForDay(dayIndex);
         }
 
-        // Initialize slider at very beginning
-        slider.value = 0;
-        updateMapByDay(0, false);
+        // Initial state
+        slider.value = STAGES.foreshocks.anchorDayIndex;
+        updateMapByDay(Number(slider.value));
+        updateStageUI("foreshocks", STAGES);
 
-        // --- Animate zoom from US → Bay Area quake cloud ---
+        // Zoom animation from US → Bay Area
         d3.transition()
           .delay(300)
           .duration(1500)
@@ -689,7 +871,7 @@
             };
           });
 
-        // --- Slider & Playback Controls ---
+        // Playback controls
         let playing = false;
         let playInterval = null;
 
@@ -697,7 +879,6 @@
           if (playing) return;
           playing = true;
           playButton.textContent = "⏸";
-
           playInterval = setInterval(() => {
             let val = Number(slider.value);
             if (val < Number(slider.max)) {
@@ -718,7 +899,7 @@
           clearInterval(playInterval);
         }
 
-        playButton.addEventListener('click', () => {
+        playButton.addEventListener("click", () => {
           if (!playing) {
             startPlayback();
           } else {
@@ -726,50 +907,25 @@
           }
         });
 
-        slider.addEventListener('input', () => {
+        slider.addEventListener("input", () => {
           const dayIndex = Number(slider.value);
           updateMapByDay(dayIndex, true);
-          if (playing) {
-            stopPlayback();
-          }
+          if (playing) stopPlayback();
         });
 
-        // --- Scroll-driven Story Logic ---
-        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.6 };
-
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
-            const sectionId = entry.target.id;
-
-            if (sectionId === 'foreshocks') {
-              stopPlayback();
-              const idx = 0;
-              slider.value = idx;
-              updateMapByDay(idx, false);
-            } else if (sectionId === 'mainshock') {
-              stopPlayback();
-              slider.value = mainshockIndex;
-              updateMapByDay(mainshockIndex, false);
-            } else if (sectionId === 'aftershocks') {
-              if (!playing) {
-                const idx = Math.min(mainshockIndex + 1, totalDays);
-                slider.value = idx;
-                updateMapByDay(idx, false);
-                startPlayback();
-              }
-            } else if (sectionId === 'rebuilding') {
-              stopPlayback();
-              const idx = totalDays;
-              slider.value = idx;
-              updateMapByDay(idx, false);
-            }
+        // Stage pill clicks jump the slider to that stage's anchor day
+        stageMarkers.forEach(btn => {
+          btn.addEventListener("click", () => {
+            const stageId = btn.dataset.stage;
+            const s = STAGES[stageId];
+            if (!s) return;
+            const idx = s.anchorDayIndex;
+            slider.value = idx;
+            updateMapByDay(idx, true);
           });
-        }, observerOptions);
-
-        chapters.forEach(ch => observer.observe(ch));
-      }); // end csv load
-    }); // end map load
+        });
+      });
+    });
   </script>
 </body>
 </html>
