@@ -4,12 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Loma Prieta in Motion – DSC 209R Final Project</title>
+
+  <!-- Font: Fraunces (used for title + badges) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+    rel="stylesheet"
+  >
+
   <style>
     :root {
       --bg: #050816;
       --panel: #11182e;
-      --ink: #e6ebff;
-      --muted: #9fb2ff;
+      --ink: #f1f3ff;
+      --muted: #b2bddf;
       --accent: #7aa2ff;
       --accent2: #a3ffcd;
     }
@@ -22,13 +31,13 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-        "Helvetica Neue", Arial, sans-serif;
+      /* BODY: your default sans stack */
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       color: var(--ink);
       background: var(--bg);
     }
 
-    /* Allow scroll on all devices */
     body {
       overflow-y: auto;
     }
@@ -37,37 +46,26 @@
     .hero {
       position: relative;
       width: 100%;
-      min-height: 100vh; /* can grow taller than viewport */
+      min-height: 100vh;
       overflow: visible;
-      /* Fallback static image if video fails / is subtle */
+      /* Background photo (always visible) with dark overlay via gradient */
       background:
-        linear-gradient(to bottom right, rgba(5,8,20,0.9), rgba(5,8,20,0.9)),
+        linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.9)),
         url("hero_still.jpg") center / cover no-repeat fixed;
-      /* If you don't have hero_still.jpg yet, this still works: just a dark gradient */
-    }
-
-    /* Background video */
-    .hero-video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: blur(2px) brightness(0.85);
-      transform: scale(1.05);
-      z-index: -2;
+      /* Slight desaturation / darkening effect */
+      background-blend-mode: multiply;
     }
 
     .hero-overlay {
       position: fixed;
       inset: 0;
+      /* neutral dark overlay for readability, slight vignette */
       background:
-        radial-gradient(circle at top left, rgba(122,162,255,0.25), transparent 55%),
-        linear-gradient(to bottom right, rgba(5,8,20,0.5), rgba(5,8,20,0.75));
+        radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 55%),
+        linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.85));
       z-index: -1;
     }
 
-    /* Content block top-left */
     .hero-inner {
       max-width: 720px;
       padding: 32px 5vw 40px;
@@ -77,41 +75,61 @@
       display: flex;
       gap: 12px;
       align-items: center;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--accent2);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.4rem;
+      /* badges use Fraunces to match the title vibe */
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
     }
 
     .badge-pill {
       padding: 3px 10px;
       border-radius: 999px;
       border: 1px solid rgba(163,255,205,0.65);
-      background: rgba(1,12,28,0.65);
-      font-size: 0.68rem;
+      background: rgba(1,12,28,0.75);
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
     }
 
+    /* "History in Motion" as an overline closer to the title – also Fraunces */
+    .badge-subtitle {
+      margin: 0 0 0.25rem;   /* close to the main title */
+      font-size: 0.9rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      text-shadow: 0 8px 18px rgba(0,0,0,0.8);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+
+    /* TITLE: Fraunces, not all caps */
     h1 {
       margin: 0 0 0.5rem;
-      font-size: clamp(2.2rem, 3.4vw, 2.8rem);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      font-size: clamp(2.4rem, 3.6vw, 3.2rem);
+      text-transform: none;    /* <- no ALL CAPS */
       text-shadow: 0 10px 24px rgba(0,0,0,0.8);
     }
 
     .subtitle {
-      font-size: 1.02rem;
+      font-size: 1rem;
       color: var(--muted);
       max-width: 580px;
       margin: 0 0 0.9rem;
-      text-shadow: 0 8px 18px rgba(0,0,0,0.8);
+      text-shadow: 0 8px 18px rgba(0,0,0,0.85);
     }
 
     .lede {
       font-size: 0.96rem;
-      color: rgba(230,235,255,0.9);
+      color: rgba(241,243,255,0.9);
       max-width: 600px;
       margin: 0 0 1.6rem;
       text-shadow: 0 8px 18px rgba(0,0,0,0.9);
+      line-height: 1.6;
     }
 
     .lede strong {
@@ -119,7 +137,6 @@
       font-weight: 600;
     }
 
-    /* Mode summary row (small, under text) */
     .mode-row {
       display: flex;
       flex-wrap: wrap;
@@ -131,11 +148,12 @@
     .mode-pill {
       padding: 6px 10px;
       border-radius: 999px;
-      background: rgba(5,10,32,0.85);
+      background: rgba(5,10,32,0.9);
       border: 1px solid rgba(122,162,255,0.6);
       color: rgba(230,235,255,0.9);
       backdrop-filter: blur(4px);
       white-space: nowrap;
+      font-size: 0.8rem;
     }
 
     .mode-pill span.tag {
@@ -146,7 +164,6 @@
       margin-right: 6px;
     }
 
-    /* Buttons */
     .cta-row {
       display: flex;
       flex-wrap: wrap;
@@ -223,28 +240,15 @@
 </head>
 <body>
   <section class="hero">
-    <!-- Background video: make sure background.mp4 is in the same /final folder -->
-    <video
-      class="hero-video"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-    >
-      <source src="background.mp4" type="video/mp4" />
-      <!-- If the browser can't play the video, it will fall back to the static background image -->
-    </video>
-
-    <!-- Dark / color overlay on top of video -->
+    <!-- Overlay for readability (photo only, no video now) -->
     <div class="hero-overlay"></div>
 
     <!-- Text content in top-left -->
     <div class="hero-inner">
       <div class="badge-row">
         <div class="badge-pill">DSC 209R · Final Project</div>
-        <span>History in Motion</span>
       </div>
+      <div class="badge-subtitle">History in Motion</div>
 
       <h1>1989 Loma Prieta Earthquake</h1>
       <p class="subtitle">
