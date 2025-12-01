@@ -19,18 +19,19 @@
 
   <style>
     :root {
-      --bg: #0b1020;
+      --bg: #050814;
       --panel: #11182e;
-      --ink: #e6ebff;
-      --muted: #9fb2ff;
+      --ink: #f3f4ff;
+      --muted: #a2b3e6;
       --accent: #7aa2ff;
       --accent2: #a3ffcd;
+      --museum-gold: #f5e4c4;
     }
 
     html, body {
       margin: 0;
       height: 100%;
-      background: var(--bg);
+      background: radial-gradient(circle at top left, #111827 0, #020617 65%);
       color: var(--ink);
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
         "Helvetica Neue", Arial, sans-serif;
@@ -41,14 +42,16 @@
     /* Header */
     .site-header {
       padding: 20px 6vw 12px;
-      background: radial-gradient(circle at top left, #1b2550 0, #050816 55%);
+      background:
+        linear-gradient(to right, rgba(4,7,20,0.96), rgba(7,13,34,0.96)),
+        radial-gradient(circle at top left, rgba(54,65,114,0.7) 0, transparent 55%);
       border-bottom: 1px solid rgba(154, 179, 255, 0.25);
     }
     .site-header .eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.16em;
       font-size: 0.78rem;
-      color: var(--accent2);
+      color: var(--museum-gold);
       margin-bottom: 0.35rem;
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
     }
@@ -56,7 +59,7 @@
       margin: 0 0 0.4rem;
       font-size: clamp(1.9rem, 3vw, 2.4rem);
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
     }
     .site-header .tagline {
       margin: 0 0 0.2rem;
@@ -94,12 +97,13 @@
     /* Map panel (top-left) */
     .map-panel {
       position: relative;
-      background: radial-gradient(circle at top left, #161f3e 0, #050816 60%);
+      background: radial-gradient(circle at top left, #161f3e 0, #020715 60%);
       border-radius: 18px;
       overflow: hidden;
       height: 60vh;
       min-height: 360px;
       box-shadow: 0 22px 40px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(148, 163, 234, 0.35);
     }
 
     #mapSvg {
@@ -111,7 +115,7 @@
 
     path.state {
       fill: var(--panel);
-      stroke: rgba(122, 162, 255, 0.2);
+      stroke: rgba(122, 162, 255, 0.18);
       stroke-width: 1px;
     }
 
@@ -137,7 +141,7 @@
       top: 14px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(10, 16, 37, 0.9);
+      background: rgba(6, 10, 27, 0.94);
       border-radius: 999px;
       padding: 6px 14px;
       display: flex;
@@ -158,13 +162,15 @@
 
     /* Stage info panel (top-right) */
     .stage-panel {
-      background: var(--panel);
+      background:
+        linear-gradient(to bottom, rgba(9,11,24,0.97), rgba(9,14,32,0.98));
       border-radius: 18px;
       padding: 18px 20px 20px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65);
       display: flex;
       flex-direction: column;
       gap: 10px;
+      border: 1px solid rgba(148, 163, 234, 0.4);
     }
     .stage-kicker {
       text-transform: uppercase;
@@ -178,6 +184,7 @@
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
       font-size: 1.4rem;
       letter-spacing: 0.03em;
+      color: var(--museum-gold);
     }
     .stage-panel p {
       margin: 0;
@@ -221,7 +228,7 @@
       padding: 4px 10px;
       border-radius: 999px;
       border: 1px solid rgba(159, 178, 255, 0.6);
-      background: rgba(4, 10, 30, 0.8);
+      background: rgba(4, 10, 30, 0.9);
       color: var(--muted);
       font-size: 0.78rem;
       text-transform: uppercase;
@@ -232,11 +239,11 @@
     .stage-marker.active {
       border-color: var(--accent2);
       color: var(--accent2);
-      background: rgba(11, 19, 52, 0.95);
+      background: rgba(11, 19, 52, 0.98);
       box-shadow: 0 0 0 1px rgba(163, 255, 205, 0.4);
     }
 
-    /* Bottom region: timeline + media strip */
+    /* Bottom region: magnitude curve + pointer bar + media strip */
     .bottom-row {
       display: grid;
       grid-template-rows: auto auto;
@@ -245,7 +252,7 @@
     }
 
     .timeline-region {
-      background: rgba(5, 8, 22, 0.94);
+      background: rgba(5, 8, 22, 0.96);
       border-radius: 14px;
       padding: 8px 16px 12px;
       border: 1px solid rgba(122, 162, 255, 0.35);
@@ -264,13 +271,22 @@
 
     .mini-timeline {
       width: 100%;
-      height: 46px;
+      height: 52px;
       pointer-events: none;
     }
     .mini-timeline svg {
       width: 100%;
       height: 100%;
       display: block;
+    }
+    .timeline-area {
+      fill: rgba(245, 228, 196, 0.18);
+      stroke: rgba(245, 228, 196, 0.9);
+      stroke-width: 1.3px;
+    }
+    .timeline-baseline {
+      stroke: rgba(159, 178, 255, 0.6);
+      stroke-width: 0.8;
     }
     .timeline-cursor {
       stroke: var(--accent2);
@@ -287,84 +303,156 @@
     .timeline-controls button {
       background: var(--panel);
       color: var(--ink);
-      border: 1px solid var(--accent);
-      border-radius: 4px;
+      border: 1px solid var(--accent2);
+      border-radius: 999px;
       font-size: 15px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       cursor: pointer;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
     }
+
     .timeline-controls input[type="range"] {
       -webkit-appearance: none;
       width: 82%;
-      height: 6px;
-      background: var(--muted);
+      height: 18px;
+      background: transparent;
       cursor: pointer;
       margin: 0;
+    }
+    .timeline-controls input[type="range"]::-webkit-slider-runnable-track {
+      height: 3px;
+      background:
+        repeating-linear-gradient(
+          to right,
+          rgba(159, 178, 255, 0.85) 0px,
+          rgba(159, 178, 255, 0.85) 1px,
+          rgba(42, 57, 118, 0.6) 1px,
+          rgba(42, 57, 118, 0.6) 8px
+        );
+      border-radius: 999px;
     }
     .timeline-controls input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
       width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #e6ebff;
-      border: 2px solid var(--accent);
-      margin-top: -5px;
+      height: 24px;
+      border-radius: 3px;
+      background: var(--accent2);
+      border: 1px solid #ffffff;
+      box-shadow:
+        0 0 0 2px rgba(11, 16, 42, 0.95),
+        0 6px 14px rgba(0,0,0,0.85);
+      margin-top: -11px; /* center on track */
       cursor: pointer;
+    }
+    .timeline-controls input[type="range"]::-moz-range-track {
+      height: 3px;
+      background:
+        repeating-linear-gradient(
+          to right,
+          rgba(159, 178, 255, 0.85) 0px,
+          rgba(159, 178, 255, 0.85) 1px,
+          rgba(42, 57, 118, 0.6) 1px,
+          rgba(42, 57, 118, 0.6) 8px
+        );
+      border-radius: 999px;
     }
     .timeline-controls input[type="range"]::-moz-range-thumb {
       width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #e6ebff;
-      border: 2px solid var(--accent);
+      height: 24px;
+      border-radius: 3px;
+      background: var(--accent2);
+      border: 1px solid #ffffff;
+      box-shadow:
+        0 0 0 2px rgba(11, 16, 42, 0.95),
+        0 6px 14px rgba(0,0,0,0.85);
       cursor: pointer;
+    }
+
+    .pointer-label-wrap {
+      position: relative;
+      height: 18px;
+      margin-top: 4px;
+    }
+    .pointer-label {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      font-size: 0.78rem;
+      color: rgba(236, 242, 255, 0.94);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .media-strip {
       display: flex;
-      gap: 12px;
+      gap: 6px;
       overflow-x: auto;
-      padding: 4px 2px 4px;
+      padding: 6px 0 2px;
       scrollbar-color: rgba(122, 162, 255, 0.6) transparent;
+      border-top: 1px dashed rgba(99, 115, 189, 0.7);
+      padding-top: 8px;
     }
     .media-card {
-      min-width: 210px;
-      background: #0f172a;
-      border-radius: 12px;
+      position: relative;
+      min-width: 60px;
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 70%);
+      border-radius: 6px;
       border: 1px solid rgba(122, 162, 255, 0.3);
       overflow: hidden;
       flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
+      cursor: pointer;
     }
     .media-card.active {
       border-color: var(--accent2);
-      box-shadow: 0 0 0 1px rgba(163, 255, 205, 0.4), 0 14px 28px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 0 1px rgba(163, 255, 205, 0.5),
+        0 12px 24px rgba(0, 0, 0, 0.9);
     }
     .media-thumb {
       width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #020617;
+      height: 100%;
+      background:
+        linear-gradient(to bottom, rgba(15,23,42,0.1), rgba(15,23,42,1)),
+        repeating-linear-gradient(
+          135deg,
+          rgba(51,65,85,0.6) 0px,
+          rgba(51,65,85,0.6) 1px,
+          rgba(15,23,42,1) 1px,
+          rgba(15,23,42,1) 4px
+        );
     }
     .media-meta {
-      padding: 6px 8px 8px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 2px 4px 3px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+      font-size: 0.62rem;
+      color: var(--ink);
+      opacity: 0;
+      transition: opacity 0.16s ease-out;
     }
-    .media-title {
-      font-size: 0.86rem;
-      font-weight: 600;
-      margin-bottom: 3px;
+    .media-card:hover .media-meta {
+      opacity: 1;
     }
     .media-stage-label {
-      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.16em;
+      font-size: 0.6rem;
       color: var(--muted);
-      margin-bottom: 4px;
+      margin-bottom: 1px;
+    }
+    .media-title {
+      font-size: 0.68rem;
+      font-weight: 600;
     }
     .media-caption {
-      font-size: 0.8rem;
-      color: rgba(212, 219, 255, 0.9);
+      display: none; /* used only in modal */
     }
 
     /* Tooltip */
@@ -390,6 +478,76 @@
       color: var(--muted);
     }
 
+    /* Media modal */
+    .media-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      transition: opacity 0.18s ease-out;
+    }
+    .media-modal.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .media-modal-card {
+      width: min(720px, 92vw);
+      max-height: 90vh;
+      background: #050816;
+      border-radius: 14px;
+      border: 1px solid rgba(163, 255, 205, 0.55);
+      box-shadow: 0 26px 50px rgba(0, 0, 0, 0.92);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-media {
+      background: #020617;
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.86rem;
+      text-align: center;
+      padding: 16px;
+    }
+    .modal-text {
+      padding: 14px 16px 16px;
+    }
+    .modal-stage {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      margin-bottom: 4px;
+    }
+    .modal-text h3 {
+      margin: 0 0 6px;
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-size: 1.2rem;
+      color: var(--museum-gold);
+    }
+    .modal-text p {
+      margin: 0 0 10px;
+      font-size: 0.9rem;
+      color: rgba(226, 232, 255, 0.92);
+    }
+    .modal-close {
+      border: 1px solid rgba(163, 255, 205, 0.7);
+      background: transparent;
+      color: var(--accent2);
+      border-radius: 999px;
+      font-size: 0.86rem;
+      padding: 5px 14px;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+
     /* Responsive */
     @media (max-width: 900px) {
       .top-row {
@@ -410,7 +568,8 @@
       information and media update in real time.
     </p>
     <p class="subtag">
-      Use the time slider to scrub through the year-long sequence, or let the animation play from the main shock onward.
+      Use the time bar below to scrub through the sequence, or let the animation play from the main shock onward—like
+      replaying a historical newsreel.
     </p>
     <p class="subtag">
       <a href="final.html" class="back-link">← Back to project overview</a>
@@ -470,9 +629,9 @@
     </div>
 
     <div class="bottom-row">
-      <!-- Timeline + controls (bottom top) -->
+      <!-- Magnitude curve + pointer bar -->
       <div class="timeline-region">
-        <div class="timeline-title">Seismic activity over time</div>
+        <div class="timeline-title">Magnitude over time</div>
         <div class="mini-timeline">
           <svg id="miniTimelineSvg"></svg>
         </div>
@@ -480,9 +639,12 @@
           <button id="playPause" title="Play/Pause Timeline">▶</button>
           <input id="timeSlider" type="range" min="0" step="1" value="0" />
         </div>
+        <div class="pointer-label-wrap">
+          <div id="pointerLabel" class="pointer-label">—</div>
+        </div>
       </div>
 
-      <!-- Media strip (bottom bottom) -->
+      <!-- Media strip (like editing thumbnails) -->
       <div class="media-strip" id="mediaStrip">
         <div class="media-card active" data-stage="foreshocks">
           <div class="media-thumb"></div>
@@ -499,7 +661,7 @@
           <div class="media-thumb"></div>
           <div class="media-meta">
             <div class="media-stage-label">Main shock</div>
-            <div class="media-title">5:04 pm, October 17</div>
+            <div class="media-title">5:04 pm broadcast</div>
             <div class="media-caption">
               Placeholder for freeway collapse images, the World Series broadcast interruption, or seismograms.
             </div>
@@ -531,6 +693,22 @@
     </div>
   </main>
 
+  <!-- Modal for media previews -->
+  <div id="mediaModal" class="media-modal hidden">
+    <div class="media-modal-card">
+      <div class="modal-media">
+        <!-- Later you can replace this text with <img> or <video> using the same modal -->
+        <span id="modalMediaLabel">Media placeholder – insert archival photo or video here.</span>
+      </div>
+      <div class="modal-text">
+        <div class="modal-stage" id="modalStageLabel">Stage</div>
+        <h3 id="modalTitle">Title</h3>
+        <p id="modalCaption">Caption text goes here.</p>
+        <button id="modalClose" class="modal-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // --- DOM + D3 setup ---
     const mapPanel = document.getElementById("map-panel");
@@ -548,6 +726,16 @@
     const countLabel = document.getElementById("eventCountLabel");
     const slider = document.getElementById("timeSlider");
     const playButton = document.getElementById("playPause");
+    const pointerLabel = document.getElementById("pointerLabel");
+    const pointerLabelWrap = document.querySelector(".pointer-label-wrap");
+
+    // Modal elements
+    const mediaModal = document.getElementById("mediaModal");
+    const modalStageLabel = document.getElementById("modalStageLabel");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalCaption = document.getElementById("modalCaption");
+    const modalMediaLabel = document.getElementById("modalMediaLabel");
+    const modalClose = document.getElementById("modalClose");
 
     const tooltip = d3.select("body")
       .append("div")
@@ -586,6 +774,32 @@
         card.classList.toggle("active", card.dataset.stage === stageId);
       });
     }
+
+    function openMediaModalFromCard(card) {
+      const stageText = card.querySelector(".media-stage-label")?.textContent || "";
+      const titleText = card.querySelector(".media-title")?.textContent || "";
+      const captionText = card.querySelector(".media-caption")?.textContent || "";
+
+      modalStageLabel.textContent = stageText;
+      modalTitle.textContent = titleText;
+      modalCaption.textContent = captionText || "Description coming soon.";
+      modalMediaLabel.textContent = `Placeholder for ${stageText.toLowerCase()} media.`;
+
+      mediaModal.classList.remove("hidden");
+    }
+
+    modalClose.addEventListener("click", () => {
+      mediaModal.classList.add("hidden");
+    });
+    mediaModal.addEventListener("click", (e) => {
+      if (e.target === mediaModal) {
+        mediaModal.classList.add("hidden");
+      }
+    });
+
+    mediaCards.forEach(card => {
+      card.addEventListener("click", () => openMediaModalFromCard(card));
+    });
 
     // Load US states geometry
     d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(function(usData) {
@@ -719,53 +933,59 @@
           .domain([Math.max(3.5, magExtent[0] || 4.0), Math.min(7.5, magExtent[1] || 7)])
           .range([1.5, 6]);
 
-        // Mini timeline: quakes per day
+        // Mini timeline: daily counts + max magnitude
         const dayData = d3.range(totalDays + 1).map(i => ({
           dayIndex: i,
           date: new Date(startDate.getTime() + i * msPerDay),
-          count: 0
+          count: 0,
+          maxMag: 0
         }));
         events.forEach(d => {
           const idx = Math.floor((d.time - startDate) / msPerDay);
-          if (idx >= 0 && idx <= totalDays) dayData[idx].count += 1;
+          if (idx >= 0 && idx <= totalDays) {
+            const bucket = dayData[idx];
+            bucket.count += 1;
+            if (!bucket.maxMag || d.mag > bucket.maxMag) {
+              bucket.maxMag = d.mag;
+            }
+          }
         });
 
+        // Magnitude curve
         const miniWidth = Math.min(mapPanel.clientWidth * 0.86, 900);
-        const miniHeight = 46;
+        const miniHeight = 52;
         const miniSvg = d3.select("#miniTimelineSvg")
           .attr("width", miniWidth)
           .attr("height", miniHeight);
 
-        const miniMargin = { top: 6, right: 8, bottom: 14, left: 8 };
+        const miniMargin = { top: 6, right: 8, bottom: 18, left: 8 };
 
         const xMini = d3.scaleLinear()
           .domain([0, totalDays])
           .range([miniMargin.left, miniWidth - miniMargin.right]);
 
+        const maxMagForScale = d3.max(dayData, d => d.maxMag || 0) || 1;
         const yMini = d3.scaleLinear()
-          .domain([0, d3.max(dayData, d => d.count) || 1])
+          .domain([0, maxMagForScale])
           .range([miniHeight - miniMargin.bottom, miniMargin.top]);
 
         const miniArea = d3.area()
           .x(d => xMini(d.dayIndex))
           .y0(yMini(0))
-          .y1(d => yMini(d.count))
+          .y1(d => yMini(d.maxMag || 0))
           .curve(d3.curveMonotoneX);
 
         miniSvg.append("path")
           .datum(dayData)
-          .attr("fill", "rgba(122,162,255,0.30)")
-          .attr("stroke", "rgba(122,162,255,0.9)")
-          .attr("stroke-width", 1.2)
+          .attr("class", "timeline-area")
           .attr("d", miniArea);
 
         miniSvg.append("line")
+          .attr("class", "timeline-baseline")
           .attr("x1", miniMargin.left)
           .attr("x2", miniWidth - miniMargin.right)
           .attr("y1", yMini(0))
-          .attr("y2", yMini(0))
-          .attr("stroke", "rgba(159,178,255,0.6)")
-          .attr("stroke-width", 0.8);
+          .attr("y2", yMini(0));
 
         const cursor = miniSvg.append("line")
           .attr("class", "timeline-cursor")
@@ -831,6 +1051,17 @@
           cursor.attr("x1", x).attr("x2", x);
         }
 
+        function updatePointerLabel(dayIndex) {
+          const dayDate = new Date(startDate.getTime() + dayIndex * msPerDay);
+          pointerLabel.textContent = formatDate(dayDate);
+          const sliderRect = slider.getBoundingClientRect();
+          const wrapRect = pointerLabelWrap.getBoundingClientRect();
+          const t = totalDays === 0 ? 0 : dayIndex / totalDays;
+          const sliderX = sliderRect.left + t * sliderRect.width;
+          const relX = sliderX - wrapRect.left;
+          pointerLabel.style.left = relX + "px";
+        }
+
         function updateStageForDay(dayIndex) {
           const stageId = stageForDay(dayIndex);
           if (stageId !== currentStageId) {
@@ -851,6 +1082,7 @@
           updateHUD(dayIndex, visibleEvents.length);
           updateTimelineCursor(dayIndex);
           updateStageForDay(dayIndex);
+          updatePointerLabel(dayIndex);
         }
 
         // Initial state
