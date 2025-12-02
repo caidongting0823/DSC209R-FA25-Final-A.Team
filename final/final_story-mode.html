@@ -143,7 +143,7 @@
       stroke-width: 2px;
     }
 
-    /* HUD over map – now shows date or date+time depending on mode */
+    /* HUD over map – now shows date / time in PT */
     .hud {
       position: absolute;
       top: 14px;
@@ -167,6 +167,72 @@
       letter-spacing: 0.08em;
       font-size: 0.72rem;
       margin-right: 4px;
+    }
+
+    /* Mainshock overlay on the map */
+    .mainshock-overlay {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      width: min(380px, 90%);
+      padding: 10px 12px 10px;
+      border-radius: 12px;
+      background: rgba(3, 7, 18, 0.96);
+      border: 1px solid rgba(163, 255, 205, 0.75);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.9);
+      z-index: 8;
+      transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.86rem;
+    }
+
+    .mainshock-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 10px);
+    }
+
+    .mainshock-badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent2);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    }
+
+    .mainshock-title {
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-size: 1rem;
+      color: var(--museum-gold);
+    }
+
+    .mainshock-time {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .mainshock-body {
+      font-size: 0.82rem;
+      color: rgba(226, 232, 255, 0.95);
+    }
+
+    .mainshock-continue {
+      align-self: flex-end;
+      margin-top: 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(163, 255, 205, 0.8);
+      background: rgba(5, 12, 30, 0.95);
+      color: var(--accent2);
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .mainshock-continue:hover {
+      background: rgba(9, 18, 48, 0.98);
     }
 
     /* Stage info panel (top-right) */
@@ -388,7 +454,7 @@
     }
 
     .timeline-region.hourly-mode .timeline-title::after {
-      content: " – hourly focus";
+      content: " – minute focus";
       font-weight: 400;
       letter-spacing: 0.12em;
       font-size: 0.7rem;
@@ -754,11 +820,27 @@
       <div id="map-panel" class="map-panel">
         <div class="hud">
           <div>
-            <span class="label-title">Date / time</span>
+            <span class="label-title">Date / time (PT)</span>
             <span id="currentDateLabel">Loading…</span>
           </div>
         </div>
         <svg id="mapSvg"></svg>
+
+        <!-- Mainshock notification overlay -->
+        <div id="mainshockOverlay" class="mainshock-overlay hidden">
+          <div class="mainshock-badge">Main shock</div>
+          <div class="mainshock-title">M 6.9 Loma Prieta earthquake</div>
+          <div id="mainshockTimeLabel" class="mainshock-time">
+            Oct 17, 1989 5:04 pm PT
+          </div>
+          <div class="mainshock-body">
+            Strong shaking radiates from the epicenter, collapsing structures and interrupting
+            the World Series broadcast across the Bay Area.
+          </div>
+          <button id="mainshockContinue" class="mainshock-continue">
+            Continue playback
+          </button>
+        </div>
       </div>
 
       <!-- Stage info (top-right) -->
@@ -884,6 +966,11 @@
     const globalProgressStage = document.getElementById("globalProgressStage");
     const globalProgressCount = document.getElementById("globalProgressCount");
 
+    // Mainshock overlay elements
+    const mainshockOverlay = document.getElementById("mainshockOverlay");
+    const mainshockTimeLabel = document.getElementById("mainshockTimeLabel");
+    const mainshockContinue = document.getElementById("mainshockContinue");
+
     // Modal elements
     const mediaModal = document.getElementById("mediaModal");
     const modalStageLabel = document.getElementById("modalStageLabel");
@@ -896,9 +983,18 @@
       .append("div")
       .attr("class", "tooltip");
 
+    // Date / time formatting
     const formatDate = d3.utcFormat("%b %d, %Y");
-    const formatTime = d3.utcFormat("%b %d, %Y %H:%M UTC");
+    const PT_OFFSET_MS = -7 * 60 * 60 * 1000; // PT = UTC-7 for October 1989
+    const formatTimeLocalRaw = d3.utcFormat("%b %d, %Y %H:%M PT");
     const formatMag = d3.format(".1f");
+
+    function toLocalPT(dateUtc) {
+      return new Date(dateUtc.getTime() + PT_OFFSET_MS);
+    }
+    function formatTimePT(dateUtc) {
+      return formatTimeLocalRaw(toLocalPT(dateUtc));
+    }
 
     // Stage panel elements
     const stageTitleEl = document.getElementById("stageTitle");
@@ -911,8 +1007,15 @@
 
     let currentStageId = "foreshocks";
     let mediaItems = []; // for track highlight
-    let timelineSteps = []; // hybrid daily + hourly steps
-    let hourlyModeActive = false;
+    let timelineSteps = []; // hybrid daily + minute steps
+    let fineModeActive = false;
+
+    let hasPausedAtMainshock = false;
+    let inEpicenterFocus = false;
+    let epicenterScale = null;
+    let epicenterTranslate = null;
+    let epicenterFocusStart = null;
+    let epicenterFocusEnd = null;
 
     function updateStageUI(stageId, STAGES) {
       if (!STAGES[stageId]) return;
@@ -1009,11 +1112,13 @@
         const storyDurationMs = endDate - startDate;
 
         const msPerDay = 24 * 60 * 60 * 1000;
-        const msPerHour = 60 * 60 * 1000;
+        const msPerMinute = 60 * 1000;
+        const FINE_MINUTE_STEP = 15; // 15-minute resolution in focus window
+        const fineStepMs = FINE_MINUTE_STEP * msPerMinute;
 
-        // Hourly focus window: 1 day before → 3 days after the main shock
-        const hourlyStartDate = new Date(mainshockDate.getTime() - msPerDay);       // Oct 16
-        const hourlyEndExclusive = new Date(mainshockDate.getTime() + msPerDay * 4); // up to Oct 21
+        // Minute-level focus window: 1 day before → 3 days after the main shock
+        const fineStartDate = new Date(mainshockDate.getTime() - msPerDay);       // Oct 16
+        const fineEndExclusive = new Date(mainshockDate.getTime() + msPerDay * 4); // up to Oct 21
 
         const events = data
           .map(d => {
@@ -1045,6 +1150,33 @@
         const foreshockEndDate = new Date(mainshockDate.getTime() - msPerDay);
         const aftershockStartDate = new Date(mainshockDate.getTime() + msPerDay);
         const rebuildingStartDate = new Date(startDate.getTime() + rebuildingStart * msPerDay);
+
+        // --- Daily bins for Event Progress Overview (earthquake counts per calendar day) ---
+        const dayBins = [];
+        let dayCursor = new Date(startDate.getTime());
+        let cumulativeDaily = 0;
+
+        while (dayCursor < endDate) {
+          const nextDay = new Date(dayCursor.getTime() + msPerDay);
+          const dayEvents = events.filter(d => d.time >= dayCursor && d.time < nextDay);
+          const dayCount = dayEvents.length;
+          cumulativeDaily += dayCount;
+
+          const idxDay = dayBins.length;
+          const midTime = new Date((dayCursor.getTime() + nextDay.getTime()) / 2);
+
+          dayBins.push({
+            dayIndex: idxDay,
+            dateStart: new Date(dayCursor.getTime()),
+            dateEnd: new Date(nextDay.getTime()),
+            midTime,
+            count: dayCount,
+            cumulative: cumulativeDaily
+          });
+
+          dayCursor = nextDay;
+        }
+
 
         // Stage metadata (drives right panel)
         const STAGES = {
@@ -1090,7 +1222,7 @@
           }
         };
 
-        // Simple media-track data – you can extend this or move to a separate JSON/JS file later.
+        // Simple media-track data – keyed to day indices for the windowed timeline
         const MEDIA_TRACKS = [
           {
             id: "precursors",
@@ -1164,7 +1296,20 @@
           return "rebuilding";
         }
 
-        // Zoom more narrowly around the mainshock cluster
+        // Compute mainshock time window for epicenter focus
+        const mainshockTimeUtc = mainEvent
+          ? mainEvent.time
+          : new Date(Date.UTC(1989, 9, 17, 0, 4, 0));
+
+        // Zoom in around the epicenter from 2 hours before → 24 hours after the mainshock
+        epicenterFocusStart = new Date(mainshockTimeUtc.getTime() - 2 * 60 * 60 * 1000);
+        epicenterFocusEnd   = new Date(mainshockTimeUtc.getTime() + 24 * 60 * 60 * 1000);
+
+        if (mainshockTimeLabel) {
+          mainshockTimeLabel.textContent = formatTimePT(mainshockTimeUtc);
+        }
+
+        // Zoom more narrowly around the mainshock cluster (Bay Area view)
         let zoomEvents = events;
         if (mainEvent) {
           const lon0 = mainEvent.longitude;
@@ -1201,9 +1346,41 @@
         const targetScale = projection.scale();
         const targetTranslate = projection.translate();
 
-        // Reset to US view before animating zoom
-        projection.scale(initialScale).translate(initialTranslate);
+        // Compute an even tighter epicenter focus view
+        if (mainEvent) {
+          const lon0 = mainEvent.longitude;
+          const lat0 = mainEvent.latitude;
+          const dLonFocus = 0.6;
+          const dLatFocus = 0.5;
+
+          const focusPoly = {
+            type: "Polygon",
+            coordinates: [[
+              [lon0 - dLonFocus, lat0 - dLatFocus],
+              [lon0 + dLonFocus, lat0 - dLatFocus],
+              [lon0 + dLonFocus, lat0 + dLatFocus],
+              [lon0 - dLonFocus, lat0 + dLatFocus],
+              [lon0 - dLonFocus, lat0 - dLatFocus]
+            ]]
+          };
+
+          const focusProj = d3.geoAlbersUsa();
+          focusProj.fitExtent(
+            [[width * 0.2, height * 0.18], [width * 0.8, height * 0.9]],
+            focusPoly
+          );
+
+          epicenterScale = focusProj.scale();
+          epicenterTranslate = focusProj.translate();
+        } else {
+          epicenterScale = targetScale;
+          epicenterTranslate = targetTranslate;
+        }
+
+        // Use the regional / California view as the base camera (no continental US view)
+        projection.scale(targetScale).translate(targetTranslate);
         svg.selectAll("path.state").attr("d", path);
+
 
         // Radius scale
         const magExtent = d3.extent(events, d => d.mag || 4.5);
@@ -1211,24 +1388,90 @@
           .domain([Math.max(3.5, magExtent[0] || 4.0), Math.min(7.5, magExtent[1] || 7)])
           .range([1.5, 6]);
 
-        // Mini timeline: daily counts (distribution of earthquakes)
-        const dayData = d3.range(totalDays + 1).map(i => ({
-          dayIndex: i,
-          date: new Date(startDate.getTime() + i * msPerDay),
-          count: 0,
-          maxMag: 0
-        }));
-        events.forEach(d => {
-          const idx = Math.floor((d.time - startDate) / msPerDay);
-          if (idx >= 0 && idx <= totalDays) {
-            const bucket = dayData[idx];
-            bucket.count += 1;
-            if (!bucket.maxMag || d.mag > bucket.maxMag) {
-              bucket.maxMag = d.mag;
-            }
+        function safeRadius(d, baseMult = 1) {
+          const mag = d && Number.isFinite(d.mag) ? d.mag : 4.5;
+          const base = (window.mainEvent && d === window.mainEvent)
+            ? 8
+            : rScale(mag);
+
+          // Apply any multiplier, then clamp to a positive minimum
+          const r = base * baseMult;
+          return Math.max(0.5, Math.abs(r || 0));  // never <= 0
+        }
+
+        // Build hybrid timeline steps: daily outside focus window, 15-minute steps within
+        timelineSteps = [];
+        let stepIndex = 0;
+
+        // Daily steps before the fine-focus window
+        let tCursor = new Date(startDate.getTime());
+        while (tCursor < fineStartDate && tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + msPerDay);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd,
+            isFine: false
+          });
+          tCursor = tEnd;
+        }
+
+        // 15-minute steps across [fineStartDate, fineEndExclusive)
+        tCursor = new Date(fineStartDate.getTime());
+        while (tCursor < fineEndExclusive && tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + fineStepMs);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd,
+            isFine: true
+          });
+          tCursor = tEnd;
+        }
+
+        // Daily steps after the fine window
+        tCursor = new Date(Math.max(fineEndExclusive.getTime(), tCursor.getTime()));
+        while (tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + msPerDay);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd > endDate ? new Date(endDate.getTime()) : tEnd,
+            isFine: false
+          });
+          tCursor = tEnd;
+        }
+
+        slider.max = Math.max(0, timelineSteps.length - 1);
+        slider.step = 1;
+
+        // Precompute per-step stats so Event Progress Overview aligns with the hybrid timeline
+        let cumulative = 0;
+        let mainshockStepIndex = 0;
+        if (!timelineSteps.length) mainshockStepIndex = 0;
+
+        timelineSteps.forEach((step, idx) => {
+          const stepEvents = events.filter(d =>
+            d.time >= step.timeStart && d.time < step.timeEnd
+          );
+          const stepCount = stepEvents.length;
+          cumulative += stepCount;
+
+          step.stepCount = stepCount;
+          step.cumulativeCount = cumulative;
+          step.midTime = new Date(
+            (step.timeStart.getTime() + step.timeEnd.getTime()) / 2
+          );
+
+          if (mainEvent &&
+              mainEvent.time >= step.timeStart &&
+              mainEvent.time < step.timeEnd &&
+              mainshockStepIndex === 0) {
+            mainshockStepIndex = idx;
           }
         });
 
+        // Global overview: daily earthquake counts, with a highlighted minute-level focus window
         const progressTrackEl = document.querySelector(".global-progress-track");
         const miniWidth = (progressTrackEl && progressTrackEl.clientWidth)
           ? progressTrackEl.clientWidth
@@ -1240,39 +1483,52 @@
 
         const miniMargin = { top: 6, right: 8, bottom: 12, left: 8 };
 
-        const maxCountForScale = d3.max(dayData, d => d.count || 0) || 1;
-        const yMini = d3.scaleLinear()
-          .domain([0, maxCountForScale])
-          .range([miniHeight - miniMargin.bottom, miniMargin.top]);
-
-        const WINDOW_DAYS = 60;
+        // --- Sliding window config for the bottom media tracks ---
+        const WINDOW_DAYS = 40;  // how many days are visible in the window at once
         let currentWindowStart = 0;
-        let currentWindowEnd = Math.min(WINDOW_DAYS, totalDays);
+        let currentWindowEnd = Math.min(totalDays, WINDOW_DAYS);
 
-        // xGlobal now represents "days since start" (can be fractional)
-        const xGlobal = d3.scaleLinear()
-          .domain([0, totalDays])
+        const xGlobal = d3.scaleTime()
+          .domain([startDate, endDate])
           .range([miniMargin.left, miniWidth - miniMargin.right]);
 
-        let xWindow = d3.scaleLinear()
+        // Scale that maps day indices within [currentWindowStart, currentWindowEnd] → pixel X
+        const xWindow = d3.scaleLinear()
           .domain([currentWindowStart, currentWindowEnd])
           .range([miniMargin.left, miniWidth - miniMargin.right]);
 
+        // Use daily counts for the vertical scale
+        const maxDailyCount = d3.max(dayBins, d => d.count || 0) || 1;
+        const yMini = d3.scaleLinear()
+          .domain([0, maxDailyCount])
+          .range([miniHeight - miniMargin.bottom, miniMargin.top]);
+
+        // Highlight band for the minute-level (slow-motion) focus window
+        miniSvg.append("rect")
+          .attr("x", xGlobal(fineStartDate))
+          .attr("y", miniMargin.top)
+          .attr("width", xGlobal(fineEndExclusive) - xGlobal(fineStartDate))
+          .attr("height", miniHeight - miniMargin.top - miniMargin.bottom)
+          .attr("fill", "rgba(122, 162, 255, 0.12)")
+         .attr("stroke", "rgba(163, 255, 205, 0.8)")
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,3");
+
         const miniArea = d3.area()
-          .x(d => xGlobal(d.dayIndex))
+          .x(d => xGlobal(d.midTime))
           .y0(yMini(0))
-          .y1(d => yMini(d.count || 0))
+          .y1(d => yMini(d.count || 0))   // daily counts, not per-step cumulative
           .curve(d3.curveMonotoneX);
 
-        const miniPath = miniSvg.append("path")
-          .datum(dayData)
+        miniSvg.append("path")
+          .datum(dayBins)
           .attr("class", "timeline-area")
           .attr("d", miniArea);
 
-        const miniBaseline = miniSvg.append("line")
+        miniSvg.append("line")
           .attr("class", "timeline-baseline")
-          .attr("x1", xGlobal(0))
-          .attr("x2", xGlobal(totalDays))
+          .attr("x1", xGlobal(startDate))
+          .attr("x2", xGlobal(endDate))
           .attr("y1", yMini(0))
           .attr("y2", yMini(0));
 
@@ -1281,51 +1537,6 @@
           .attr("y1", miniMargin.top)
           .attr("y2", miniHeight - miniMargin.bottom);
 
-        // Build hybrid timeline steps: daily outside focus window, hourly within
-        timelineSteps = [];
-        let stepIndex = 0;
-
-        // Daily steps before the hourly focus window
-        let tCursor = new Date(startDate.getTime());
-        while (tCursor < hourlyStartDate && tCursor < endDate) {
-          const tEnd = new Date(tCursor.getTime() + msPerDay);
-          timelineSteps.push({
-            index: stepIndex++,
-            timeStart: tCursor,
-            timeEnd: tEnd,
-            isHourly: false
-          });
-          tCursor = tEnd;
-        }
-
-        // Hourly steps across [hourlyStartDate, hourlyEndExclusive)
-        tCursor = new Date(hourlyStartDate.getTime());
-        while (tCursor < hourlyEndExclusive && tCursor < endDate) {
-          const tEnd = new Date(tCursor.getTime() + msPerHour);
-          timelineSteps.push({
-            index: stepIndex++,
-            timeStart: tCursor,
-            timeEnd: tEnd,
-            isHourly: true
-          });
-          tCursor = tEnd;
-        }
-
-        // Daily steps after the hourly window
-        tCursor = new Date(Math.max(hourlyEndExclusive.getTime(), tCursor.getTime()));
-        while (tCursor < endDate) {
-          const tEnd = new Date(tCursor.getTime() + msPerDay);
-          timelineSteps.push({
-            index: stepIndex++,
-            timeStart: tCursor,
-            timeEnd: tEnd > endDate ? new Date(endDate.getTime()) : tEnd,
-            isHourly: false
-          });
-          tCursor = tEnd;
-        }
-
-        slider.max = Math.max(0, timelineSteps.length - 1);
-        slider.step = 1;
 
         // Helper: map target date → nearest step index
         function findAnchorIndex(targetDate) {
@@ -1333,7 +1544,7 @@
           let bestIdx = 0;
           let bestDiff = Infinity;
           timelineSteps.forEach((step, idx) => {
-            const mid = new Date(
+            const mid = step.midTime || new Date(
               (step.timeStart.getTime() + step.timeEnd.getTime()) / 2
             );
             const diff = Math.abs(mid - targetDate);
@@ -1372,7 +1583,7 @@
               .attr("class", "media-item")
               .style("left", x + "px")
               .on("click", () => {
-                // Jump to the step whose start time is closest to this day
+                // Jump to the step whose mid time is closest to this day
                 const anchorDate = new Date(startDate.getTime() + item.dayIndex * msPerDay);
                 const idx = findAnchorIndex(anchorDate);
                 slider.value = idx;
@@ -1406,7 +1617,7 @@
             const pt = projection([d.longitude, d.latitude]);
             return pt ? pt[1] : -10;
           })
-          .attr("r", d => (mainEvent && d === mainEvent) ? 8 : rScale(d.mag || 5))
+          .attr("r", d => safeRadius(d))
           .attr("opacity", 0)
           .on("mouseenter", (event, d) => {
             tooltip
@@ -1414,7 +1625,7 @@
               .html(
                 `<div class="place">${d.place || "Unknown location"}</div>
                  <div class="meta">Magnitude ${formatMag(d.mag || 0)}</div>
-                 <div class="meta">${formatTime(d.time)}</div>`
+                 <div class="meta">${formatTimePT(d.time)}</div>`
               );
           })
           .on("mousemove", (event) => {
@@ -1439,22 +1650,38 @@
             });
         }
 
-        function updateHUD(timeStart, isHourly) {
-          if (isHourly) {
-            dateLabel.textContent = formatTime(timeStart);
+        function animateProjection(scaleTarget, translateTarget, durationMs) {
+          d3.transition()
+            .duration(durationMs || 800)
+            .tween("projectionEpicenter", () => {
+              const s0 = projection.scale();
+              const t0 = projection.translate();
+              const iScale = d3.interpolate(s0, scaleTarget);
+              const iTranslate = d3.interpolate(t0, translateTarget);
+              return t => {
+                projection.scale(iScale(t)).translate(iTranslate(t));
+                redrawProjection();
+              };
+            });
+        }
+
+        function updateHUD(timeStart, isFine) {
+          if (isFine) {
+            dateLabel.textContent = formatTimePT(timeStart);
           } else {
-            dateLabel.textContent = formatDate(timeStart);
+            dateLabel.textContent = formatDate(toLocalPT(timeStart));
           }
         }
 
-        function updateTimelineCursor(timeStart) {
-          const dayPosition = (timeStart - startDate) / msPerDay;
-          const x = xGlobal(dayPosition);
+        function updateTimelineCursor(timePoint) {
+          const x = xGlobal(timePoint);
           cursor.attr("x1", x).attr("x2", x);
         }
 
-        function updatePointerLabel(stepIndex, timeStart, isHourly) {
-          pointerLabel.textContent = isHourly ? formatTime(timeStart) : formatDate(timeStart);
+        function updatePointerLabel(stepIndex, timeStart, isFine) {
+          pointerLabel.textContent = isFine
+            ? formatTimePT(timeStart)
+            : formatDate(toLocalPT(timeStart));
 
           const sliderRect = slider.getBoundingClientRect();
           const wrapRect = pointerLabelWrap.getBoundingClientRect();
@@ -1481,7 +1708,8 @@
           });
         }
 
-        function updateGlobalProgress(timeEnd, visibleCount) {
+        function updateGlobalProgress(step) {
+          const timeEnd = step.timeEnd;
           const fractionTime = storyDurationMs > 0
             ? (timeEnd - startDate) / storyDurationMs
             : 0;
@@ -1490,15 +1718,30 @@
           globalProgressFill.style.width = percent + "%";
           globalProgressThumb.style.left = percent + "%";
 
+          // Stage label driven by where we are in time
           const stageId = stageForTime(timeEnd);
           const s = STAGES[stageId];
           globalProgressStage.textContent = s ? s.title : "—";
 
           const totalText = totalEvents || 0;
           const plural = totalText === 1 ? "earthquake" : "earthquakes";
-          globalProgressCount.textContent =
-            `${visibleCount} of ${totalText} ${plural}`;
+
+          // Map current time → calendar day, then look up that day's stats
+          let dayIndex = Math.floor((timeEnd - startDate) / msPerDay);
+          if (!Number.isFinite(dayIndex)) dayIndex = 0;
+          dayIndex = Math.max(0, Math.min(dayBins.length - 1, dayIndex));
+          const daySummary = dayBins[dayIndex];
+
+          const dayCount = daySummary ? daySummary.count || 0 : 0;
+          const cumulativeCount = daySummary ? daySummary.cumulative || 0 : 0;
+          const dateLabel = daySummary
+           ? formatDate(toLocalPT(daySummary.dateStart))
+            : "—";
+
+         globalProgressCount.textContent =
+            `${dateLabel}: ${dayCount} ${plural} · Cumulative: ${cumulativeCount} of ${totalText}`;
         }
+
 
         function updateWindow(dayIndex) {
           const halfWindow = Math.floor(WINDOW_DAYS / 2);
@@ -1528,14 +1771,29 @@
           });
         }
 
-        function updateHourlyMode(step) {
+        function updateFineMode(step) {
           if (!step) return;
-          if (step.isHourly && !hourlyModeActive) {
-            hourlyModeActive = true;
+          if (step.isFine && !fineModeActive) {
+            fineModeActive = true;
             timelineRegionEl.classList.add("hourly-mode");
-          } else if (!step.isHourly && hourlyModeActive) {
-            hourlyModeActive = false;
+          } else if (!step.isFine && fineModeActive) {
+            fineModeActive = false;
             timelineRegionEl.classList.remove("hourly-mode");
+          }
+        }
+
+        function updateEpicenterFocusForTime(timeStart) {
+          if (!epicenterScale || !epicenterTranslate ||
+              !epicenterFocusStart || !epicenterFocusEnd) return;
+
+          if (timeStart >= epicenterFocusStart && timeStart <= epicenterFocusEnd) {
+            if (!inEpicenterFocus) {
+              inEpicenterFocus = true;
+              animateProjection(epicenterScale, epicenterTranslate, 750);
+            }
+          } else if (inEpicenterFocus) {
+            inEpicenterFocus = false;
+            animateProjection(targetScale, targetTranslate, 750);
           }
         }
 
@@ -1545,32 +1803,42 @@
 
           const timeStart = step.timeStart;
           const timeEnd = step.timeEnd;
-          const isHourly = step.isHourly;
+          const isFine = step.isFine;
 
           const dayIndex = Math.floor((timeStart - startDate) / msPerDay);
 
           updateWindow(dayIndex);
 
-          const visibleEvents = events.filter(d => d.time <= timeEnd);
-
           circles
             .attr("opacity", d => d.time <= timeEnd ? (d === mainEvent ? 1 : 0.85) : 0)
             .classed("recent", d => d.time >= timeStart && d.time < timeEnd);
 
-          updateHUD(timeStart, isHourly);
-          updateTimelineCursor(timeStart);
+          updateHUD(timeStart, isFine);
+          updateTimelineCursor(step.midTime || timeStart);
           updateStageForTime(timeStart);
-          updatePointerLabel(stepIdx, timeStart, isHourly);
+          updatePointerLabel(stepIdx, timeStart, isFine);
           updateMediaHighlight(dayIndex);
-          updateGlobalProgress(timeEnd, visibleEvents.length);
-          updateHourlyMode(step);
+          updateGlobalProgress(step);
+          updateFineMode(step);
+          updateEpicenterFocusForTime(timeStart);
+
+          // Pause and show overlay when mainshock falls into this step during playback
+          if (playing && mainEvent && !hasPausedAtMainshock) {
+            if (mainEvent.time >= timeStart && mainEvent.time < timeEnd) {
+              hasPausedAtMainshock = true;
+              stopPlayback();
+              if (mainshockOverlay) {
+                mainshockOverlay.classList.remove("hidden");
+              }
+            }
+          }
         }
 
         // Initial state
         const initialIndex = STAGES.foreshocks.anchorIndex ?? 0;
         slider.value = initialIndex;
-        updateViewByStep(initialIndex);
         updateStageUI("foreshocks", STAGES);
+        updateViewByStep(initialIndex);
 
         // Zoom animation from US → Bay Area
         d3.transition()
@@ -1586,8 +1854,9 @@
           });
 
         // Playback controls
-        let playing = false;
-        let playInterval = null;
+        var playing = false;
+        var playInterval = null;
+
 
         function startPlayback() {
           if (playing) return;
@@ -1615,7 +1884,19 @@
           clearInterval(playInterval);
         }
 
+        // Mainshock overlay "continue" button
+        if (mainshockContinue) {
+          mainshockContinue.addEventListener("click", () => {
+            mainshockOverlay.classList.add("hidden");
+            if (!playing) startPlayback();
+          });
+        }
+
         playButton.addEventListener("click", () => {
+          // If overlay is showing, hide it and resume
+          if (!mainshockOverlay.classList.contains("hidden")) {
+            mainshockOverlay.classList.add("hidden");
+          }
           if (!playing) {
             startPlayback();
           } else {
