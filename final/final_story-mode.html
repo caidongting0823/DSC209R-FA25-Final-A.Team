@@ -1393,69 +1393,70 @@
         // Simple media-track data – keyed to day indices for the windowed timeline
         const MEDIA_TRACKS = [
           {
-            id: "precursors",
-            label: "Foreshocks & precursors",
-            items: [
-              {
-                id: "foreshock-story",
-                dayIndex: 0,
-                stageId: "foreshocks",
-                stageLabel: "Foreshocks",
-                title: "Early tremors in 1989",
-                caption: "Placeholder: archival coverage or maps of smaller quakes leading up to October 17.",
-                href: ""
-              }
-            ]
-          },
-          {
-            id: "mainshock",
-            label: "Main shock coverage",
+            id: "broadcast-overview",
+            label: "Live broadcast & overview",
             items: [
               {
                 id: "world-series-broadcast",
                 dayIndex: mainshockIndex,
                 stageId: "mainshock",
                 stageLabel: "Main shock",
-                title: "World Series broadcast interruption",
-                caption: "Placeholder: TV clip from Candlestick Park as the quake hits.",
-                href: ""
+                title: "World Series broadcast interrupted",
+                caption: "National Archives / FEMA footage of ABC’s live World Series pre-game when the quake struck at 5:04 PM PDT.",
+                href: "https://archive.org/details/gov.archives.arc.951729"
               },
               {
-                id: "freeway-collapse",
-                dayIndex: mainshockIndex,
-                stageId: "mainshock",
-                stageLabel: "Main shock",
-                title: "Freeway & bridge damage",
-                caption: "Placeholder: photos of collapsed structures and emergency response.",
-                href: ""
+                id: "usgs-index-map",
+                dayIndex: rebuildingStart,
+                stageId: "rebuilding",
+                stageLabel: "Rebuilding",
+                title: "USGS damage photo index",
+                caption: "USGS DDS-29 index map showing documented damage photo locations across the Bay Area.",
+                href: "https://pubs.usgs.gov/dds/dds-29/screens/001sr.jpeg"
               }
             ]
           },
           {
-            id: "after-rebuild",
-            label: "Aftershocks & rebuilding",
+            id: "infrastructure-damage",
+            label: "Freeways & bridges",
             items: [
               {
-                id: "aftershock-cloud",
-                dayIndex: aftershockStartIndex,
-                stageId: "aftershocks",
-                stageLabel: "Aftershocks",
-                title: "Aftershock cloud",
-                caption: "Placeholder: animation or map showing the swarm of aftershocks.",
-                href: ""
+                id: "cypress-viaduct-collapse",
+                dayIndex: mainshockIndex,
+                stageId: "mainshock",
+                stageLabel: "Main shock",
+                title: "Cypress Viaduct collapse, Oakland",
+                caption: "Aerial USGS view of the collapsed double-deck I-880 Cypress Street Viaduct where many fatalities occurred.",
+                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/LomaPrieta1989img0019Cypress.jpg"
+              }
+            ]
+          },
+          {
+            id: "marina-district",
+            label: "Marina District damage",
+            items: [
+              {
+                id: "marina-building-collapse",
+                dayIndex: mainshockIndex,
+                stageId: "mainshock",
+                stageLabel: "Main shock",
+                title: "Marina District building collapse",
+                caption: "USGS image of a collapsed Marina District apartment building resting on a crushed car on filled ground.",
+                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/SFLomaPrietaMarinaDistrict.jpg"
               },
               {
-                id: "retrofit-policy",
-                dayIndex: rebuildingStart,
-                stageId: "rebuilding",
-                stageLabel: "Rebuilding",
-                title: "Retrofitting & policy",
-                caption: "Placeholder: imagery or documents on seismic retrofits and policy changes.",
-                href: ""
+                id: "marina-fire",
+                dayIndex: mainshockIndex + 1,
+                stageId: "aftershocks",
+                stageLabel: "Aftershocks",
+                title: "Marina District fire & gas-fed blaze",
+                caption: "USGS photo of fire and collapsed buildings at Beach and Divisadero after gas lines ignited.",
+                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/LomaPrietaSFDivisideroCollapseMeyer.jpg"
               }
             ]
           }
         ];
+
 
         function stageForTime(t) {
           if (t < mainshockDate) return "foreshocks";
@@ -1716,17 +1717,35 @@
           .style("height", (TRACK_ROW_HEIGHT * MEDIA_TRACKS.length) + "px");
 
         mediaItems = [];
+        const MIN_MEDIA_CENTER_GAP = 110;
+
         MEDIA_TRACKS.forEach((track, trackIndex) => {
           const row = mediaTrackContainer
             .append("div")
             .attr("class", "media-track-row")
             .style("top", (trackIndex * TRACK_ROW_HEIGHT) + "px");
 
-          track.items.forEach(item => {
-            const x = xWindow(item.dayIndex);
+          // Position items so they don’t visually stack on top of each other.
+          const positioned = track.items
+            .map(item => ({
+              item,
+              // We treat the CSS left value as the *center* because of translateX(-50%).
+              desiredCenter: xWindow(item.dayIndex) + (item.offsetPx || 0)
+            }))
+            .sort((a, b) => a.desiredCenter - b.desiredCenter);
+
+          let lastCenter = -Infinity;
+
+          positioned.forEach(({ item, desiredCenter }) => {
+            let center = desiredCenter;
+            if (center < lastCenter + MIN_MEDIA_CENTER_GAP) {
+              center = lastCenter + MIN_MEDIA_CENTER_GAP;
+            }
+            lastCenter = center;
+
             const block = row.append("button")
               .attr("class", "media-item")
-              .style("left", x + "px")
+              .style("left", center + "px")
               .on("click", () => {
                 // Jump to the step whose mid time is closest to this day
                 const anchorDate = new Date(startDate.getTime() + item.dayIndex * msPerDay);
@@ -2047,7 +2066,7 @@
               circles.classed("mainshock-active", d =>
                 mainEvent && d === mainEvent && blinkNow
               );
-            
+
           updateHUD(timeStart, isFine);
           updateTimelineCursor(step.midTime || timeStart);
           updateStageForTime(timeStart);
