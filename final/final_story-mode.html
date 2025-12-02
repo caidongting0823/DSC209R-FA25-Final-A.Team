@@ -143,7 +143,7 @@
       stroke-width: 2px;
     }
 
-    /* HUD over map – now only shows date */
+    /* HUD over map – now shows date or date+time depending on mode */
     .hud {
       position: absolute;
       top: 14px;
@@ -358,7 +358,7 @@
       font-size: 0.78rem;
     }
 
-    /* Bottom region: windowed magnitude curve + slider + media tracks */
+    /* Bottom region: windowed playback timeline + media tracks */
     .bottom-row {
       flex: 1 1 auto;          /* ~45% for the progress + media area */
       min-height: 0;
@@ -376,6 +376,24 @@
       gap: 4px;
       min-height: 0;
       height: 100%;
+      transition: transform 0.35s ease, box-shadow 0.35s ease,
+                  border-color 0.35s ease, background 0.35s ease;
+    }
+
+    .timeline-region.hourly-mode {
+      transform: scale(0.96);
+      background: rgba(6, 10, 26, 0.98);
+      border-color: rgba(163, 255, 205, 0.7);
+      box-shadow: 0 22px 40px rgba(0, 0, 0, 0.9);
+    }
+
+    .timeline-region.hourly-mode .timeline-title::after {
+      content: " – hourly focus";
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      font-size: 0.7rem;
+      margin-left: 6px;
+      color: var(--accent2);
     }
 
     .timeline-header {
@@ -467,6 +485,9 @@
         );
       border-radius: 999px;
     }
+    .timeline-region.hourly-mode .timeline-controls input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+    }
     .timeline-controls input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
@@ -492,6 +513,9 @@
           rgba(42, 57, 118, 0.6) 8px
         );
       border-radius: 999px;
+    }
+    .timeline-region.hourly-mode .timeline-controls input[type="range"]::-moz-range-track {
+      height: 4px;
     }
     .timeline-controls input[type="range"]::-moz-range-thumb {
       width: 16px;
@@ -730,7 +754,7 @@
       <div id="map-panel" class="map-panel">
         <div class="hud">
           <div>
-            <span class="label-title">Date</span>
+            <span class="label-title">Date / time</span>
             <span id="currentDateLabel">Loading…</span>
           </div>
         </div>
@@ -852,6 +876,7 @@
     const playButton = document.getElementById("playPause");
     const pointerLabel = document.getElementById("pointerLabel");
     const pointerLabelWrap = document.querySelector(".pointer-label-wrap");
+    const timelineRegionEl = document.querySelector(".timeline-region");
 
     // Global progress bar elements
     const globalProgressFill = document.getElementById("globalProgressFill");
@@ -886,6 +911,8 @@
 
     let currentStageId = "foreshocks";
     let mediaItems = []; // for track highlight
+    let timelineSteps = []; // hybrid daily + hourly steps
+    let hourlyModeActive = false;
 
     function updateStageUI(stageId, STAGES) {
       if (!STAGES[stageId]) return;
@@ -976,9 +1003,17 @@
       d3.csv("../dataset/us_loma_prieta_1988_1990_allmags.csv").then(function(data) {
         const parseTime = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ");
 
-        const mainshockDate = new Date(Date.UTC(1989, 9, 17)); // Oct 17 1989
+        const mainshockDate = new Date(Date.UTC(1989, 9, 17)); // Oct 17 1989 (UTC midnight)
         const startDate = new Date(Date.UTC(1989, 3, 17));     // Apr 17 1989
         const endDate   = new Date(Date.UTC(1990, 3, 17));     // Apr 17 1990
+        const storyDurationMs = endDate - startDate;
+
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const msPerHour = 60 * 60 * 1000;
+
+        // Hourly focus window: 1 day before → 3 days after the main shock
+        const hourlyStartDate = new Date(mainshockDate.getTime() - msPerDay);       // Oct 16
+        const hourlyEndExclusive = new Date(mainshockDate.getTime() + msPerDay * 4); // up to Oct 21
 
         const events = data
           .map(d => {
@@ -998,9 +1033,7 @@
         const mainEvent = events.find(d => d.place && d.place.includes("Loma Prieta"));
         const totalEvents = events.length;
 
-        const msPerDay = 24 * 60 * 60 * 1000;
         const totalDays = Math.round((endDate - startDate) / msPerDay);
-        slider.max = totalDays;
 
         let mainshockIndex = 0;
         if (mainEvent) {
@@ -1023,7 +1056,7 @@
             window: `${formatDate(startDate)} – ${formatDate(foreshockEndDate)}`,
             magRange: "Mostly M3–M5 events",
             focus: "Subtle stress changes before the main slip.",
-            anchorDayIndex: 0
+            anchorDate: startDate
           },
           mainshock: {
             id: "mainshock",
@@ -1033,7 +1066,7 @@
             window: formatDate(mainshockDate),
             magRange: "M6.9",
             focus: "Sudden rupture along the San Andreas Fault.",
-            anchorDayIndex: mainshockIndex
+            anchorDate: mainshockDate
           },
           aftershocks: {
             id: "aftershocks",
@@ -1043,7 +1076,7 @@
             window: `${formatDate(aftershockStartDate)} – ${formatDate(rebuildingStartDate)}`,
             magRange: "Mostly M3–M5, with occasional larger events",
             focus: "Fault readjustment and lingering seismicity.",
-            anchorDayIndex: aftershockStartIndex
+            anchorDate: aftershockStartDate
           },
           rebuilding: {
             id: "rebuilding",
@@ -1053,7 +1086,7 @@
             window: `${formatDate(rebuildingStartDate)} – ${formatDate(endDate)}`,
             magRange: "Fewer felt events in the dataset",
             focus: "Long-term changes to buildings, bridges, and policy.",
-            anchorDayIndex: totalDays
+            anchorDate: endDate
           }
         };
 
@@ -1065,7 +1098,7 @@
             items: [
               {
                 id: "foreshock-story",
-                dayIndex: STAGES.foreshocks.anchorDayIndex,
+                dayIndex: 0,
                 stageId: "foreshocks",
                 stageLabel: "Foreshocks",
                 title: "Early tremors in 1989",
@@ -1080,7 +1113,7 @@
             items: [
               {
                 id: "world-series-broadcast",
-                dayIndex: STAGES.mainshock.anchorDayIndex,
+                dayIndex: mainshockIndex,
                 stageId: "mainshock",
                 stageLabel: "Main shock",
                 title: "World Series broadcast interruption",
@@ -1089,7 +1122,7 @@
               },
               {
                 id: "freeway-collapse",
-                dayIndex: STAGES.mainshock.anchorDayIndex,
+                dayIndex: mainshockIndex,
                 stageId: "mainshock",
                 stageLabel: "Main shock",
                 title: "Freeway & bridge damage",
@@ -1104,7 +1137,7 @@
             items: [
               {
                 id: "aftershock-cloud",
-                dayIndex: STAGES.aftershocks.anchorDayIndex,
+                dayIndex: aftershockStartIndex,
                 stageId: "aftershocks",
                 stageLabel: "Aftershocks",
                 title: "Aftershock cloud",
@@ -1113,7 +1146,7 @@
               },
               {
                 id: "retrofit-policy",
-                dayIndex: STAGES.rebuilding.anchorDayIndex,
+                dayIndex: rebuildingStart,
                 stageId: "rebuilding",
                 stageLabel: "Rebuilding",
                 title: "Retrofitting & policy",
@@ -1124,19 +1157,41 @@
           }
         ];
 
-        function stageForDay(dayIndex) {
-          if (dayIndex < mainshockIndex) return "foreshocks";
-          if (dayIndex === mainshockIndex) return "mainshock";
-          if (dayIndex > mainshockIndex && dayIndex < rebuildingStart) return "aftershocks";
+        function stageForTime(t) {
+          if (t < mainshockDate) return "foreshocks";
+          if (t < aftershockStartDate) return "mainshock";
+          if (t < rebuildingStartDate) return "aftershocks";
           return "rebuilding";
         }
 
-        // Zoom to Bay Area cloud
-        const coords = events.map(d => [d.longitude, d.latitude]);
+        // Zoom more narrowly around the mainshock cluster
+        let zoomEvents = events;
+        if (mainEvent) {
+          const lon0 = mainEvent.longitude;
+          const lat0 = mainEvent.latitude;
+          const lonSpan = 2.4; // ~±2.4° longitude
+          const latSpan = 2.0; // ~±2.0° latitude
+          const lonMin = lon0 - lonSpan;
+          const lonMax = lon0 + lonSpan;
+          const latMin = lat0 - latSpan;
+          const latMax = lat0 + latSpan;
+
+          const localEvents = events.filter(d =>
+            d.longitude >= lonMin &&
+            d.longitude <= lonMax &&
+            d.latitude >= latMin &&
+            d.latitude <= latMax
+          );
+          if (localEvents.length > 0) {
+            zoomEvents = localEvents;
+          }
+        }
+
+        const coords = zoomEvents.map(d => [d.longitude, d.latitude]);
         if (coords.length > 0) {
           const multiPoint = { type: "MultiPoint", coordinates: coords };
-          const paddingX = width * 0.12;
-          const paddingY = height * 0.16;
+          const paddingX = width * 0.06;
+          const paddingY = height * 0.08;
 
           projection.fitExtent(
             [[paddingX, paddingY], [width - paddingX, height - paddingY]],
@@ -1194,6 +1249,7 @@
         let currentWindowStart = 0;
         let currentWindowEnd = Math.min(WINDOW_DAYS, totalDays);
 
+        // xGlobal now represents "days since start" (can be fractional)
         const xGlobal = d3.scaleLinear()
           .domain([0, totalDays])
           .range([miniMargin.left, miniWidth - miniMargin.right]);
@@ -1225,6 +1281,75 @@
           .attr("y1", miniMargin.top)
           .attr("y2", miniHeight - miniMargin.bottom);
 
+        // Build hybrid timeline steps: daily outside focus window, hourly within
+        timelineSteps = [];
+        let stepIndex = 0;
+
+        // Daily steps before the hourly focus window
+        let tCursor = new Date(startDate.getTime());
+        while (tCursor < hourlyStartDate && tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + msPerDay);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd,
+            isHourly: false
+          });
+          tCursor = tEnd;
+        }
+
+        // Hourly steps across [hourlyStartDate, hourlyEndExclusive)
+        tCursor = new Date(hourlyStartDate.getTime());
+        while (tCursor < hourlyEndExclusive && tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + msPerHour);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd,
+            isHourly: true
+          });
+          tCursor = tEnd;
+        }
+
+        // Daily steps after the hourly window
+        tCursor = new Date(Math.max(hourlyEndExclusive.getTime(), tCursor.getTime()));
+        while (tCursor < endDate) {
+          const tEnd = new Date(tCursor.getTime() + msPerDay);
+          timelineSteps.push({
+            index: stepIndex++,
+            timeStart: tCursor,
+            timeEnd: tEnd > endDate ? new Date(endDate.getTime()) : tEnd,
+            isHourly: false
+          });
+          tCursor = tEnd;
+        }
+
+        slider.max = Math.max(0, timelineSteps.length - 1);
+        slider.step = 1;
+
+        // Helper: map target date → nearest step index
+        function findAnchorIndex(targetDate) {
+          if (!timelineSteps.length) return 0;
+          let bestIdx = 0;
+          let bestDiff = Infinity;
+          timelineSteps.forEach((step, idx) => {
+            const mid = new Date(
+              (step.timeStart.getTime() + step.timeEnd.getTime()) / 2
+            );
+            const diff = Math.abs(mid - targetDate);
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              bestIdx = idx;
+            }
+          });
+          return bestIdx;
+        }
+
+        // Attach anchor slider indices to each stage
+        Object.values(STAGES).forEach(stage => {
+          stage.anchorIndex = findAnchorIndex(stage.anchorDate);
+        });
+
         // Build media tracks aligned to the local (windowed) time scale
         const TRACK_ROW_HEIGHT = 34;
 
@@ -1247,8 +1372,11 @@
               .attr("class", "media-item")
               .style("left", x + "px")
               .on("click", () => {
-                slider.value = item.dayIndex;
-                updateMapByDay(item.dayIndex, true);
+                // Jump to the step whose start time is closest to this day
+                const anchorDate = new Date(startDate.getTime() + item.dayIndex * msPerDay);
+                const idx = findAnchorIndex(anchorDate);
+                slider.value = idx;
+                updateViewByStep(idx, true);
                 openMediaModalFromData(item);
               });
 
@@ -1311,29 +1439,34 @@
             });
         }
 
-        function updateHUD(dayIndex) {
-          const dayStart = new Date(startDate.getTime() + dayIndex * msPerDay);
-          dateLabel.textContent = formatDate(dayStart);
+        function updateHUD(timeStart, isHourly) {
+          if (isHourly) {
+            dateLabel.textContent = formatTime(timeStart);
+          } else {
+            dateLabel.textContent = formatDate(timeStart);
+          }
         }
 
-        function updateTimelineCursor(dayIndex) {
-          const x = xGlobal(dayIndex);
+        function updateTimelineCursor(timeStart) {
+          const dayPosition = (timeStart - startDate) / msPerDay;
+          const x = xGlobal(dayPosition);
           cursor.attr("x1", x).attr("x2", x);
         }
 
-        function updatePointerLabel(dayIndex) {
-          const dayDate = new Date(startDate.getTime() + dayIndex * msPerDay);
-          pointerLabel.textContent = formatDate(dayDate);
+        function updatePointerLabel(stepIndex, timeStart, isHourly) {
+          pointerLabel.textContent = isHourly ? formatTime(timeStart) : formatDate(timeStart);
+
           const sliderRect = slider.getBoundingClientRect();
           const wrapRect = pointerLabelWrap.getBoundingClientRect();
-          const t = totalDays === 0 ? 0 : dayIndex / totalDays;
+          const maxVal = Number(slider.max) || (timelineSteps.length - 1) || 1;
+          const t = maxVal > 0 ? stepIndex / maxVal : 0;
           const sliderX = sliderRect.left + t * sliderRect.width;
           const relX = sliderX - wrapRect.left;
           pointerLabel.style.left = relX + "px";
         }
 
-        function updateStageForDay(dayIndex) {
-          const stageId = stageForDay(dayIndex);
+        function updateStageForTime(timeStart) {
+          const stageId = stageForTime(timeStart);
           if (stageId !== currentStageId) {
             updateStageUI(stageId, STAGES);
           }
@@ -1348,13 +1481,16 @@
           });
         }
 
-        function updateGlobalProgress(dayIndex, visibleCount) {
-          const fraction = totalDays > 0 ? dayIndex / totalDays : 0;
-          const percent = Math.max(0, Math.min(1, fraction)) * 100;
+        function updateGlobalProgress(timeEnd, visibleCount) {
+          const fractionTime = storyDurationMs > 0
+            ? (timeEnd - startDate) / storyDurationMs
+            : 0;
+          const clamped = Math.max(0, Math.min(1, fractionTime));
+          const percent = clamped * 100;
           globalProgressFill.style.width = percent + "%";
           globalProgressThumb.style.left = percent + "%";
 
-          const stageId = stageForDay(dayIndex);
+          const stageId = stageForTime(timeEnd);
           const s = STAGES[stageId];
           globalProgressStage.textContent = s ? s.title : "—";
 
@@ -1392,29 +1528,48 @@
           });
         }
 
-        function updateMapByDay(dayIndex, fromSlider = false) {
+        function updateHourlyMode(step) {
+          if (!step) return;
+          if (step.isHourly && !hourlyModeActive) {
+            hourlyModeActive = true;
+            timelineRegionEl.classList.add("hourly-mode");
+          } else if (!step.isHourly && hourlyModeActive) {
+            hourlyModeActive = false;
+            timelineRegionEl.classList.remove("hourly-mode");
+          }
+        }
+
+        function updateViewByStep(stepIdx, fromSlider = false) {
+          const step = timelineSteps[stepIdx];
+          if (!step) return;
+
+          const timeStart = step.timeStart;
+          const timeEnd = step.timeEnd;
+          const isHourly = step.isHourly;
+
+          const dayIndex = Math.floor((timeStart - startDate) / msPerDay);
+
           updateWindow(dayIndex);
 
-          const dayStart = new Date(startDate.getTime() + dayIndex * msPerDay);
-          const dayEnd = new Date(dayStart.getTime() + msPerDay);
-
-          const visibleEvents = events.filter(d => d.time <= dayEnd);
+          const visibleEvents = events.filter(d => d.time <= timeEnd);
 
           circles
-            .attr("opacity", d => d.time <= dayEnd ? (d === mainEvent ? 1 : 0.85) : 0)
-            .classed("recent", d => d.time >= dayStart && d.time < dayEnd);
+            .attr("opacity", d => d.time <= timeEnd ? (d === mainEvent ? 1 : 0.85) : 0)
+            .classed("recent", d => d.time >= timeStart && d.time < timeEnd);
 
-          updateHUD(dayIndex);
-          updateTimelineCursor(dayIndex);
-          updateStageForDay(dayIndex);
-          updatePointerLabel(dayIndex);
+          updateHUD(timeStart, isHourly);
+          updateTimelineCursor(timeStart);
+          updateStageForTime(timeStart);
+          updatePointerLabel(stepIdx, timeStart, isHourly);
           updateMediaHighlight(dayIndex);
-          updateGlobalProgress(dayIndex, visibleEvents.length);
+          updateGlobalProgress(timeEnd, visibleEvents.length);
+          updateHourlyMode(step);
         }
 
         // Initial state
-        slider.value = STAGES.foreshocks.anchorDayIndex;
-        updateMapByDay(Number(slider.value));
+        const initialIndex = STAGES.foreshocks.anchorIndex ?? 0;
+        slider.value = initialIndex;
+        updateViewByStep(initialIndex);
         updateStageUI("foreshocks", STAGES);
 
         // Zoom animation from US → Bay Area
@@ -1440,9 +1595,11 @@
           playButton.textContent = "⏸";
           playInterval = setInterval(() => {
             let val = Number(slider.value);
-            if (val < Number(slider.max)) {
-              slider.value = val + 1;
-              updateMapByDay(val + 1, true);
+            const maxVal = Number(slider.max);
+            if (val < maxVal) {
+              const next = val + 1;
+              slider.value = next;
+              updateViewByStep(next, true);
             } else {
               clearInterval(playInterval);
               playing = false;
@@ -1467,20 +1624,20 @@
         });
 
         slider.addEventListener("input", () => {
-          const dayIndex = Number(slider.value);
-          updateMapByDay(dayIndex, true);
+          const stepIdx = Number(slider.value);
+          updateViewByStep(stepIdx, true);
           if (playing) stopPlayback();
         });
 
-        // Stage pill clicks jump the slider to that stage's anchor day
+        // Stage pill clicks jump the slider to that stage's anchor step
         stageMarkers.forEach(btn => {
           btn.addEventListener("click", () => {
             const stageId = btn.dataset.stage;
             const s = STAGES[stageId];
             if (!s) return;
-            const idx = s.anchorDayIndex;
+            const idx = s.anchorIndex ?? 0;
             slider.value = idx;
-            updateMapByDay(idx, true);
+            updateViewByStep(idx, true);
           });
         });
       });
