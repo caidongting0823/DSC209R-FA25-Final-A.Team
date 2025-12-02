@@ -64,8 +64,10 @@
     .content-wrapper {
       max-width: 900px;
       width: 100%;
+      margin: 0 auto;        /* NEW: center the inner column */
+      text-align: center;    /* OPTIONAL: keeps CTA text centered nicely */
     }
-
+    
     .section-header {
       text-align: center;
       margin-bottom: 60px;
@@ -391,7 +393,7 @@
       <div class="hero-badge">Data Story</div>
       <h1 class="hero-title">Understanding the<br>1989 Loma Prieta Earthquake</h1>
       <p class="hero-subtitle">
-        Through 30,000+ seismic events across three years,<br>
+        Through nearly 29,000 seismic events across just over two years,<br>
         we trace the story hidden in the data
       </p>
 
@@ -425,7 +427,7 @@
         <div class="section-number">01 — Timeline</div>
         <h2>Three Years of Seismic Activity</h2>
         <p class="section-description">
-          From January 1988 to December 1990, thousands of earthquakes shook the region.
+          From June 1988 to June 1990, thousands of earthquakes shook the region.
           The mainshock on October 17, 1989 stands out dramatically.
         </p>
       </div>
@@ -439,7 +441,7 @@
       </div>
 
       <div class="stat-highlight">
-        The <strong>6.9 magnitude mainshock</strong> released approximately <strong>15 times more energy</strong> than all other recorded events in this period combined.
+        The <strong>6.9 magnitude mainshock</strong> released <strong>over 25 times more energy</strong> than all other recorded events in this period combined, accounting for about <strong>96%</strong> of the total seismic energy.
       </div>
     </div>
   </section>
@@ -473,7 +475,7 @@
       <div class="legend" id="magnitude-legend"></div>
 
       <div class="stat-highlight">
-        <strong>29,587</strong> earthquakes were magnitude 2.0 or less — small tremors often unfelt by humans. Only <strong>23</strong> exceeded magnitude 4.0.
+        <strong>25,466</strong> earthquakes were magnitude 2.0 or less — small tremors often unfelt by humans. Only <strong>75</strong> exceeded magnitude 4.0, and just <strong>7</strong> reached magnitude 5.0 or higher.
       </div>
     </div>
   </section>
@@ -506,7 +508,7 @@
       </div>
 
       <div class="stat-highlight">
-        In the <strong>48 hours</strong> following the mainshock, there were <strong>1,237 aftershocks</strong> — more seismic events than the entire previous year.
+        In the <strong>48 hours</strong> after the mainshock, there were <strong>1,576 earthquakes</strong> — around <strong>37 times</strong> more than in the 48 hours before it.
       </div>
     </div>
   </section>
@@ -583,7 +585,7 @@
       </div>
 
       <div class="stat-highlight">
-        Most earthquakes cluster between <strong>5-10 km depth</strong>. The mainshock occurred deeper at <strong>17.2 km</strong>, releasing energy from within the brittle crust.
+        Most earthquakes clustered between <strong>0-5 km depth</strong>, within the upper crust. The mainshock occurred deeper at <strong>17.2 km</strong>, releasing energy from within the brittle crust.
       </div>
     </div>
   </section>
@@ -609,7 +611,7 @@
       </div>
 
       <div class="stat-highlight">
-        The mainshock released energy equivalent to approximately <strong>475 kilotons of TNT</strong> — about 32 times the atomic bomb dropped on Hiroshima.
+        The mainshock released energy equivalent to roughly <strong>340 kilotons of TNT</strong> — around <strong>22 times</strong> the atomic bomb dropped on Hiroshima.
       </div>
     </div>
   </section>
@@ -826,11 +828,16 @@
       }
 
       function drawBubbleChart() {
-        // Pack layout for all earthquakes
+        // Pack layout for a sampled subset of earthquakes to keep this view responsive
+        const SAMPLE_SIZE = 2500;
+        const sample = earthquakeData.length > SAMPLE_SIZE
+          ? d3.shuffle(earthquakeData.slice()).slice(0, SAMPLE_SIZE)
+          : earthquakeData;
+
         const maxRadius = 8;
-        const data = earthquakeData.map(d => ({
+        const data = sample.map(d => ({
           ...d,
-          radius: Math.max(1, Math.pow(10, d.mag) / 2000)
+          radius: Math.max(1, Math.min(maxRadius, Math.pow(10, d.mag) / 2000))
         }));
 
         const simulation = d3.forceSimulation(data)
@@ -839,7 +846,7 @@
           .force('collide', d3.forceCollide(d => d.radius + 0.5))
           .stop();
 
-        for (let i = 0; i < 300; i++) simulation.tick();
+        for (let i = 0; i < 200; i++) simulation.tick();
 
         const colorScale = d3.scaleSequential(d3.interpolateRgb('#7aa2ff', '#a3ffcd'))
           .domain([0, d3.max(data, d => d.mag)]);
@@ -864,7 +871,7 @@
 
         circles.transition()
           .duration(800)
-          .delay((d, i) => i * 0.5)
+          .delay(() => Math.random() * 200)
           .attr('r', d => d.radius);
 
         // Legend
@@ -995,7 +1002,7 @@
           .on('mouseout', hideTooltip)
           .transition()
           .duration(600)
-          .delay((d, i) => i * 0.3)
+          .delay(() => Math.random() * 200)
           .attr('r', 2);
 
         updateLegend([]);
@@ -1211,7 +1218,7 @@
           .on('mouseout', hideTooltip)
           .transition()
           .duration(600)
-          .delay((d, i) => i * 0.5)
+          .delay(() => Math.random() * 150)
           .attr('opacity', d => d.mag === 6.9 ? 1 : 0.6);
       }
 
