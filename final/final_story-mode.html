@@ -1091,10 +1091,6 @@
       const states = topojson.feature(usData, usData.objects.states).features;
       const usOutline = topojson.feature(usData, usData.objects.states);
 
-      projection.fitSize([width, height], usOutline);
-      const initialScale = projection.scale();
-      const initialTranslate = projection.translate();
-
       svg.selectAll("path.state")
         .data(states)
         .enter()
@@ -1309,76 +1305,58 @@
           mainshockTimeLabel.textContent = formatTimePT(mainshockTimeUtc);
         }
 
-        // Zoom more narrowly around the mainshock cluster (Bay Area view)
-        let zoomEvents = events;
-        if (mainEvent) {
-          const lon0 = mainEvent.longitude;
-          const lat0 = mainEvent.latitude;
-          const lonSpan = 2.4; // ~±2.4° longitude
-          const latSpan = 2.0; // ~±2.0° latitude
-          const lonMin = lon0 - lonSpan;
-          const lonMax = lon0 + lonSpan;
-          const latMin = lat0 - latSpan;
-          const latMax = lat0 + latSpan;
-
-          const localEvents = events.filter(d =>
-            d.longitude >= lonMin &&
-            d.longitude <= lonMax &&
-            d.latitude >= latMin &&
-            d.latitude <= latMax
-          );
-          if (localEvents.length > 0) {
-            zoomEvents = localEvents;
-          }
-        }
-
-        const coords = zoomEvents.map(d => [d.longitude, d.latitude]);
-        if (coords.length > 0) {
-          const multiPoint = { type: "MultiPoint", coordinates: coords };
-          const paddingX = width * 0.06;
-          const paddingY = height * 0.08;
+        // Base "California-scale" camera: fit around all regional events
+        const coordsAll = events.map(d => [d.longitude, d.latitude]);
+        if (coordsAll.length > 0) {
+          const multiPointAll = { type: "MultiPoint", coordinates: coordsAll };
+          const paddingXBase = width * 0.08;
+          const paddingYBase = height * 0.10;
 
           projection.fitExtent(
-            [[paddingX, paddingY], [width - paddingX, height - paddingY]],
-            multiPoint
+            [[paddingXBase, paddingYBase], [width - paddingXBase, height - paddingYBase]],
+            multiPointAll
           );
         }
-        const targetScale = projection.scale();
-        const targetTranslate = projection.translate();
 
-        // Compute an even tighter epicenter focus view
+        // This is the default camera we want for *normal* playback
+        const baseScale = projection.scale();
+        const baseTranslate = projection.translate();
+
+        // Compute an even tighter epicenter focus view (used only during the slow-motion window)
         if (mainEvent) {
-          const lon0 = mainEvent.longitude;
-          const lat0 = mainEvent.latitude;
-          const dLonFocus = 0.6;
-          const dLatFocus = 0.5;
+          // Start from the California-scale camera (baseScale / baseTranslate)
+          const s0 = baseScale;
+          const t0 = baseTranslate;
 
-          const focusPoly = {
-            type: "Polygon",
-            coordinates: [[
-              [lon0 - dLonFocus, lat0 - dLatFocus],
-              [lon0 + dLonFocus, lat0 - dLatFocus],
-              [lon0 + dLonFocus, lat0 + dLatFocus],
-              [lon0 - dLonFocus, lat0 + dLatFocus],
-              [lon0 - dLonFocus, lat0 - dLatFocus]
-            ]]
-          };
+          // Project the mainshock with the base camera
+          const pt = projection([mainEvent.longitude, mainEvent.latitude]) || [width / 2, height / 2];
+          const x0 = pt[0];
+          const y0 = pt[1];
 
-          const focusProj = d3.geoAlbersUsa();
-          focusProj.fitExtent(
-            [[width * 0.2, height * 0.18], [width * 0.8, height * 0.9]],
-            focusPoly
-          );
+          // Recover the underlying unscaled coordinates in projection space
+          const uX = (x0 - t0[0]) / s0;
+          const uY = (y0 - t0[1]) / s0;
 
-          epicenterScale = focusProj.scale();
-          epicenterTranslate = focusProj.translate();
+          // > 1 means zoom in around the epicenter
+          const scaleFactor = 2.2;  // you can tweak: 1.8–2.5 for more/less zoom
+          const s1 = s0 * scaleFactor;
+
+          // Choose translate so the epicenter sits at the center of the map panel
+          const t1 = [
+            width / 2 - s1 * uX,
+            height / 2 - s1 * uY
+          ];
+
+          epicenterScale = s1;
+          epicenterTranslate = t1;
         } else {
-          epicenterScale = targetScale;
-          epicenterTranslate = targetTranslate;
+          // Fallback: if we somehow don't find the mainshock, don't change zoom level
+          epicenterScale = baseScale;
+          epicenterTranslate = baseTranslate;
         }
-
-        // Use the regional / California view as the base camera (no continental US view)
-        projection.scale(targetScale).translate(targetTranslate);
+          
+        // Lock the map to the California / regional view as the starting camera
+        projection.scale(baseScale).translate(baseTranslate);
         svg.selectAll("path.state").attr("d", path);
 
 
@@ -1793,7 +1771,7 @@
             }
           } else if (inEpicenterFocus) {
             inEpicenterFocus = false;
-            animateProjection(targetScale, targetTranslate, 750);
+            animateProjection(baseScale, baseTranslate, 750);
           }
         }
 
@@ -1839,19 +1817,6 @@
         slider.value = initialIndex;
         updateStageUI("foreshocks", STAGES);
         updateViewByStep(initialIndex);
-
-        // Zoom animation from US → Bay Area
-        d3.transition()
-          .delay(300)
-          .duration(1500)
-          .tween("projectionZoom", () => {
-            const iScale = d3.interpolate(initialScale, targetScale);
-            const iTranslate = d3.interpolate(initialTranslate, targetTranslate);
-            return t => {
-              projection.scale(iScale(t)).translate(iTranslate(t));
-              redrawProjection();
-            };
-          });
 
         // Playback controls
         var playing = false;
