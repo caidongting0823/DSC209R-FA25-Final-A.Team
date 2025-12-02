@@ -31,7 +31,6 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      /* BODY: your default sans stack */
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
         "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       color: var(--ink);
@@ -48,18 +47,15 @@
       width: 100%;
       min-height: 100vh;
       overflow: visible;
-      /* Background photo (always visible) with dark overlay via gradient */
       background:
         linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.9)),
         url("hero_still.jpg") center / cover no-repeat fixed;
-      /* Slight desaturation / darkening effect */
       background-blend-mode: multiply;
     }
 
     .hero-overlay {
       position: fixed;
       inset: 0;
-      /* neutral dark overlay for readability, slight vignette */
       background:
         radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 55%),
         linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.85));
@@ -80,7 +76,6 @@
       text-transform: uppercase;
       color: var(--accent2);
       margin-bottom: 0.4rem;
-      /* badges use Fraunces to match the title vibe */
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
     }
 
@@ -93,9 +88,8 @@
       letter-spacing: 0.16em;
     }
 
-    /* "History in Motion" as an overline closer to the title – also Fraunces */
     .badge-subtitle {
-      margin: 0 0 0.25rem;   /* close to the main title */
+      margin: 0 0 0.25rem;
       font-size: 0.9rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -104,14 +98,13 @@
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
     }
 
-    /* TITLE: Fraunces, not all caps */
     h1 {
       margin: 0 0 0.5rem;
       font-family: "Fraunces", Georgia, "Times New Roman", serif;
       font-weight: 600;
       letter-spacing: 0.03em;
       font-size: clamp(2.4rem, 3.6vw, 3.2rem);
-      text-transform: none;    /* <- no ALL CAPS */
+      text-transform: none;
       text-shadow: 0 10px 24px rgba(0,0,0,0.8);
     }
 
@@ -203,11 +196,6 @@
       background: rgba(3,10,28,0.4);
     }
 
-    .btn-ghost.disabled {
-      opacity: 0.55;
-      cursor: default;
-    }
-
     .meta {
       margin-top: 1.4rem;
       font-size: 0.78rem;
@@ -240,10 +228,8 @@
 </head>
 <body>
   <section class="hero">
-    <!-- Overlay for readability (photo only, no video now) -->
     <div class="hero-overlay"></div>
 
-    <!-- Text content in top-left -->
     <div class="hero-inner">
       <div class="badge-row">
         <div class="badge-pill">DSC 209R · Final Project</div>
@@ -252,37 +238,37 @@
 
       <h1>1989 Loma Prieta Earthquake</h1>
       <p class="subtitle">
-        A data-driven look at how one evening in October 1989 reshaped the Bay Area.
+        A two-part data story about how one evening in October 1989 reshaped the Bay Area.
       </p>
       <p class="lede">
-        This project combines <strong>USGS earthquake records</strong>, <strong>interactive maps</strong>,
-        and <strong>historical media</strong> to trace the months of foreshocks, the 6.9 main shock,
-        and the long tail of aftershocks that followed.
+        Start with an <strong>interactive data overview</strong> of tens of thousands of earthquakes,
+        then step into <strong>Story Mode</strong> to follow October 17, 1989 through maps, timelines,
+        and historical media.
       </p>
 
       <div class="mode-row">
         <div class="mode-pill">
-          <span class="tag">Mode 1</span>Guided Story (interactive timeline)
+          <span class="tag">Step 1</span>Intro · Data story & context
         </div>
-        <div class="mode-pill" style="opacity:0.7;">
-          <span class="tag">Mode 2</span>Data Explorer · coming soon
+        <div class="mode-pill">
+          <span class="tag">Step 2</span>Story Mode · Interactive timeline
         </div>
       </div>
 
       <div class="cta-row">
-        <a href="final_story-mode.html" class="btn btn-primary">
-          Enter Story Mode
-          <span class="icon">▶</span>
+        <a href="final_intro.html" class="btn btn-primary">
+          Start with the Intro
+          <span class="icon">→</span>
         </a>
 
-        <a href="#" class="btn btn-ghost disabled" aria-disabled="true">
-          Data Explorer (coming soon)
+        <a href="final_story-mode.html" class="btn btn-ghost">
+          Jump to Story Mode
         </a>
       </div>
 
       <div class="meta">
-        <span><span class="meta-dot"></span>Best viewed on desktop (Chrome).</span>
         <span>Data: USGS, 1988–1990 events near Loma Prieta.</span>
+        <span>Flow: Homepage → Intro → Story Mode.</span>
       </div>
     </div>
   </section>
