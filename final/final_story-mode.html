@@ -132,12 +132,34 @@
       fill: var(--accent);
       fill-opacity: 0.75;
     }
+
+    /* Mainshock: larger, red, with optional pulse */
     circle.mainshock {
-      fill: var(--accent2);
-      stroke: #ffffff;
-      stroke-width: 1.5px;
-      fill-opacity: 0.95;
+      fill: #f97373;          /* soft red */
+      stroke: #fecaca;
+      stroke-width: 2px;
+      fill-opacity: 1;
+      transform-box: fill-box;
+      transform-origin: center;
     }
+
+    /* Blinking / pulsing animation for the mainshock while it's "fresh" */
+    @keyframes mainshockPulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 4px rgba(248, 113, 113, 0.7));
+      }
+      50% {
+        transform: scale(1.4);
+        filter: drop-shadow(0 0 12px rgba(248, 113, 113, 0.9));
+      }
+    }
+
+    /* Applied only in the short window after the mainshock happens */
+    circle.mainshock-active {
+      animation: mainshockPulse 1s ease-in-out infinite;
+    }
+
     circle.quake.recent {
       stroke: var(--accent2);
       stroke-width: 2px;
@@ -247,6 +269,14 @@
     }
 
     /* Stage info panel (top-right) */
+.right-top-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 100%;
+      min-height: 0;
+    }
+
     .stage-panel {
       background:
         linear-gradient(to bottom, rgba(9,11,24,0.97), rgba(9,14,32,0.98));
@@ -257,10 +287,120 @@
       flex-direction: column;
       gap: 8px;
       border: 1px solid rgba(148, 163, 234, 0.4);
-      height: 100%;
+      flex: 1 1 0;
       min-height: 0;
       overflow: auto; /* stage text scrolls instead of page */
     }
+
+    .event-looker {
+      flex: 1 1 0;
+      min-height: 0;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at top left, rgba(19, 27, 60, 0.95), rgba(7, 10, 30, 0.98));
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(148, 163, 234, 0.35);
+      padding: 12px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .event-looker-header {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: rgba(226, 232, 255, 0.9);
+    }
+
+    .event-looker-title {
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .event-looker-window {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: rgba(148, 163, 234, 0.85);
+      white-space: nowrap;
+    }
+
+    .event-looker-feed {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      margin-top: 4px;
+      padding-top: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .event-looker-empty {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 6px 0;
+    }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: auto auto auto minmax(0, 1fr);
+      gap: 2px 10px;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px dashed rgba(56, 78, 142, 0.5);
+      font-size: 0.8rem;
+    }
+
+    .event-row:last-child {
+      border-bottom: none;
+    }
+
+    .event-time {
+      font-variant-numeric: tabular-nums;
+      color: rgba(180, 198, 255, 0.95);
+      white-space: nowrap;
+    }
+
+    .event-mag {
+      font-weight: 600;
+      color: rgba(248, 250, 252, 0.95);
+      white-space: nowrap;
+    }
+
+    .event-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .event-place {
+      font-size: 0.8rem;
+      color: rgba(226, 232, 255, 0.95);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-row.is-mainshock .event-mag {
+      color: #f97316;
+    }
+
+    .ev-mainshock-tag {
+      margin-left: 6px;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(248, 113, 113, 0.18);
+      color: rgba(248, 250, 252, 0.95);
+      border: 1px solid rgba(248, 113, 113, 0.6);
+    }
+
     .stage-kicker {
       text-transform: uppercase;
       letter-spacing: 0.16em;
@@ -822,7 +962,7 @@
 <body>
   <!-- Minimal top bar with only “back to project overview” -->
   <header class="top-nav">
-    <a href="final.html" class="back-link">← Back to project overview</a>
+    <a href="final_intro.html" class="back-link">← Back to Introduction</a>
   </header>
 
   <main class="story-layout">
@@ -854,40 +994,56 @@
         </div>
       </div>
 
-      <!-- Stage info (top-right) -->
-      <aside class="stage-panel">
-        <div class="stage-kicker">Stage overview</div>
-        <h2 id="stageTitle">Foreshocks</h2>
-        <p id="stageBlurb">
-          In the months leading up to the Loma Prieta earthquake, a handful of smaller tremors rattled the region.
-          To most residents they felt like routine “little quakes”, but in hindsight they were early signs of stress
-          building along the San Andreas Fault.
-        </p>
+      <!-- Stage info + event looker (top-right) -->
+      <div class="right-top-stack">
+        <aside class="stage-panel">
+          <!-- keep your existing Stage Overview content exactly as-is -->
+          <div class="stage-kicker">Stage overview</div>
+          <h2 id="stageTitle">Foreshocks</h2>
+          <p id="stageBlurb">
+            In the months leading up to the Loma Prieta earthquake, a handful of smaller tremors rattled the region.
+            To most residents they felt like routine “little quakes”, but in hindsight they were early signs of stress
+            building along the San Andreas Fault.
+          </p>
 
-        <dl class="stage-meta">
-          <div class="stage-meta-row">
-            <dt>Time window</dt>
-            <dd id="stageWindow">—</dd>
-          </div>
-          <div class="stage-meta-row">
-            <dt>Typical magnitude</dt>
-            <dd id="stageMag">—</dd>
-          </div>
-          <div class="stage-meta-row">
-            <dt>Focus</dt>
-            <dd id="stageFocus">—</dd>
-          </div>
-        </dl>
+          <dl class="stage-meta">
+            <div class="stage-meta-row">
+              <dt>Time window</dt>
+              <dd id="stageWindow">—</dd>
+            </div>
+            <div class="stage-meta-row">
+              <dt>Typical magnitude</dt>
+              <dd id="stageMag">—</dd>
+            </div>
+            <div class="stage-meta-row">
+              <dt>Focus</dt>
+              <dd id="stageFocus">—</dd>
+            </div>
+          </dl>
 
-        <div class="stage-legend-label">Sequence</div>
-        <div class="stage-legend">
-          <button class="stage-marker active" data-stage="foreshocks">Foreshocks</button>
-          <button class="stage-marker" data-stage="mainshock">Main shock</button>
-          <button class="stage-marker" data-stage="aftershocks">Aftershocks</button>
-          <button class="stage-marker" data-stage="rebuilding">Rebuilding</button>
-        </div>
-      </aside>
-    </div>
+          <div class="stage-legend-label">Sequence</div>
+          <div class="stage-legend">
+            <button class="stage-marker active" data-stage="foreshocks">Foreshocks</button>
+            <button class="stage-marker" data-stage="mainshock">Main shock</button>
+            <button class="stage-marker" data-stage="aftershocks">Aftershocks</button>
+            <button class="stage-marker" data-stage="rebuilding">Rebuilding</button>
+          </div>
+        </aside>
+
+        <section class="event-looker">
+          <div class="event-looker-header">
+            <div class="event-looker-title">Event looker</div>
+            <div id="eventLookerWindowLabel" class="event-looker-window">—</div>
+          </div>
+          <div id="eventLookerFeed" class="event-looker-feed">
+            <div class="event-looker-empty">
+              As the timeline plays, earthquakes in the current window will appear here in time order.
+            </div>
+          </div>
+        </section>
+      </div>
+      </div>
+
 
     <!-- Global progress / earthquake distribution + count bar -->
     <section class="global-progress">
@@ -998,6 +1154,8 @@
     const formatDate = d3.utcFormat("%b %d, %Y");
     const PT_OFFSET_MS = -7 * 60 * 60 * 1000; // PT = UTC-7 for October 1989
     const formatTimeLocalRaw = d3.utcFormat("%b %d, %Y %H:%M PT");
+    const formatShortTime = d3.utcFormat("%H:%M");
+    const formatShortDate = d3.utcFormat("%b %d");
     const formatMag = d3.format(".1f");
 
     function toLocalPT(dateUtc) {
@@ -1015,6 +1173,9 @@
     const stageFocusEl = document.getElementById("stageFocus");
     const stageMarkers = document.querySelectorAll(".stage-marker");
     const mediaCards = document.querySelectorAll(".media-card"); // legacy support (none in this layout)
+    const eventLookerFeed = document.getElementById("eventLookerFeed");
+    const eventLookerWindowLabel = document.getElementById("eventLookerWindowLabel");
+
 
     let currentStageId = "foreshocks";
     let mediaItems = []; // for track highlight
@@ -1308,6 +1469,11 @@
           ? mainEvent.time
           : new Date(Date.UTC(1989, 9, 17, 0, 4, 0));
 
+        // Blink the mainshock marker for about one hour of simulated time
+        const mainshockBlinkEnd = new Date(
+          mainshockTimeUtc.getTime() + 60 * 60 * 1000
+        );
+
         // Zoom in around the epicenter from 2 hours before → 24 hours after the mainshock
         epicenterFocusStart = new Date(mainshockTimeUtc.getTime() - 2 * 60 * 60 * 1000);
         epicenterFocusEnd   = new Date(mainshockTimeUtc.getTime() + 24 * 60 * 60 * 1000);
@@ -1377,16 +1543,15 @@
           .domain([Math.max(3.5, magExtent[0] || 4.0), Math.min(7.5, magExtent[1] || 7)])
           .range([1.5, 6]);
 
-        function safeRadius(d, baseMult = 1) {
-          const mag = d && Number.isFinite(d.mag) ? d.mag : 4.5;
-          const base = (window.mainEvent && d === window.mainEvent)
-            ? 8
-            : rScale(mag);
+          function safeRadius(d, baseMult = 1) {
+            const mag = d && Number.isFinite(d.mag) ? d.mag : 4.5;
+            const base = (mainEvent && d === mainEvent)
+              ? 10   // larger base radius for the mainshock
+              : rScale(mag);
 
-          // Apply any multiplier, then clamp to a positive minimum
-          const r = base * baseMult;
-          return Math.max(0.5, Math.abs(r || 0));  // never <= 0
-        }
+            const r = base * baseMult;
+            return Math.max(0.5, Math.abs(r || 0));  // never <= 0
+          }
 
         // Build hybrid timeline steps: daily outside focus window, 15-minute steps within
         timelineSteps = [];
@@ -1436,9 +1601,6 @@
 
         // Precompute per-step stats so Event Progress Overview aligns with the hybrid timeline
         let cumulative = 0;
-        let mainshockStepIndex = 0;
-        if (!timelineSteps.length) mainshockStepIndex = 0;
-
         timelineSteps.forEach((step, idx) => {
           const stepEvents = events.filter(d =>
             d.time >= step.timeStart && d.time < step.timeEnd
@@ -1446,18 +1608,12 @@
           const stepCount = stepEvents.length;
           cumulative += stepCount;
 
+          step.events = stepEvents;
           step.stepCount = stepCount;
           step.cumulativeCount = cumulative;
           step.midTime = new Date(
             (step.timeStart.getTime() + step.timeEnd.getTime()) / 2
           );
-
-          if (mainEvent &&
-              mainEvent.time >= step.timeStart &&
-              mainEvent.time < step.timeEnd &&
-              mainshockStepIndex === 0) {
-            mainshockStepIndex = idx;
-          }
         });
 
         // Global overview: daily earthquake counts, with a highlighted minute-level focus window
@@ -1760,6 +1916,68 @@
           });
         }
 
+
+        function updateEventLooker(step) {
+          if (!eventLookerFeed || !eventLookerWindowLabel || !step) return;
+
+          const timeStart = step.timeStart;
+          const timeEnd = step.timeEnd;
+
+          // Label for the current window in local PT
+          const startLocal = toLocalPT(timeStart);
+          const endLocal = toLocalPT(new Date(timeEnd.getTime() - 1));
+          const sameDay = formatShortDate(startLocal) === formatShortDate(endLocal);
+          let label;
+          if (sameDay) {
+            label = `${formatShortDate(startLocal)} · ${formatShortTime(startLocal)}–${formatShortTime(endLocal)} PT`;
+          } else {
+            label = `${formatShortDate(startLocal)} ${formatShortTime(startLocal)} – ${formatShortDate(endLocal)} ${formatShortTime(endLocal)} PT`;
+          }
+          eventLookerWindowLabel.textContent = label;
+
+          const stepEvents = step.events && step.events.length
+            ? step.events
+            : events.filter(d => d.time >= timeStart && d.time < timeEnd);
+
+          if (!stepEvents.length) {
+            eventLookerFeed.innerHTML = `
+              <div class="event-looker-empty">
+                No recorded earthquakes in this interval.
+              </div>`;
+            return;
+          }
+
+          const rows = stepEvents
+            .slice()
+            .sort((a, b) => d3.ascending(a.time, b.time))
+            .map(d => {
+              const localTime = toLocalPT(d.time);
+              const timeStr = `${formatShortTime(localTime)} PT`;
+              const magStr = (d.mag != null && !Number.isNaN(d.mag))
+                ? `M ${formatMag(d.mag)}`
+                : "M ?";
+              const depthStr = d.depth != null && d.depth !== ""
+                ? `${Math.round(+d.depth)} km`
+                : "Depth N/A";
+              const place = d.place || d.region || "Unknown location";
+              const isMain = mainEvent && d === mainEvent;
+              const mainLabel = isMain
+                ? `<span class="ev-mainshock-tag">Main shock</span>`
+                : "";
+              return `
+                <div class="event-row${isMain ? " is-mainshock" : ""}">
+                  <div class="event-time">${timeStr}</div>
+                  <div class="event-mag">${magStr}</div>
+                  <div class="event-meta">${depthStr}</div>
+                  <div class="event-place">${place}${mainLabel}</div>
+                </div>`;
+            })
+            .join("");
+
+          eventLookerFeed.innerHTML = rows;
+        }
+
+
         function updateFineMode(step) {
           if (!step) return;
           if (step.isFine && !fineModeActive) {
@@ -1820,7 +2038,16 @@
                   d.time < timeStart && d.time <= timeEnd && d !== mainEvent
                 );
 
+              // Mainshock blinking: pulse while timeline is close to the mainshock
+            const blinkNow =
+              mainEvent &&
+              timeEnd >= mainshockTimeUtc &&
+              timeStart <= mainshockBlinkEnd;
 
+              circles.classed("mainshock-active", d =>
+                mainEvent && d === mainEvent && blinkNow
+              );
+            
           updateHUD(timeStart, isFine);
           updateTimelineCursor(step.midTime || timeStart);
           updateStageForTime(timeStart);
@@ -1829,6 +2056,7 @@
           updateGlobalProgress(step);
           updateFineMode(step);
           updateEpicenterFocusForTime(timeStart);
+          updateEventLooker(step);
 
           // Pause and show overlay when mainshock falls into this step during playback
           if (playing && mainEvent && !hasPausedAtMainshock) {
