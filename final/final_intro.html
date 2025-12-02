@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Understanding Loma Prieta – Data Story</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: #11182e;
+      --ink: #f1f3ff;
+      --muted: #b2bddf;
+      --accent: #7aa2ff;
+      --accent2: #a3ffcd;
+      --danger: #ff6b6b;
+      --warning: #ffd93d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    /* Section containers */
+    .section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 80px 20px;
+      position: relative;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-number {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 600;
+      margin: 0 0 20px;
+      line-height: 1.2;
+    }
+
+    .section-description {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Hero section */
+    .hero-section {
+      min-height: 100vh;
+      background: linear-gradient(to bottom, rgba(5,8,22,0.95), rgba(5,8,22,0.98)),
+                  url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%23050816"/></svg>');
+      padding: 100px 20px;
+    }
+
+    .hero-content {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(163,255,205,0.5);
+      background: rgba(1,12,28,0.6);
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 24px;
+      font-family: 'Fraunces', Georgia, serif;
+    }
+
+    .hero-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 600;
+      margin: 0 0 30px;
+      line-height: 1.1;
+    }
+
+    .hero-subtitle {
+      font-size: 1.3rem;
+      color: var(--muted);
+      margin: 0 0 40px;
+      line-height: 1.5;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 30px;
+      margin: 60px 0;
+    }
+
+    .stat-card {
+      background: rgba(17,24,46,0.6);
+      border: 1px solid rgba(122,162,255,0.3);
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-value {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 2.5rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .scroll-indicator {
+      margin-top: 60px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      60% { transform: translateY(-5px); }
+    }
+
+    /* Visualization containers */
+    .viz-container {
+      background: rgba(17,24,46,0.4);
+      border: 1px solid rgba(122,162,255,0.2);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+      backdrop-filter: blur(10px);
+    }
+
+    svg {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .axis text {
+      fill: var(--muted);
+      font-size: 11px;
+    }
+
+    .axis line,
+    .axis path {
+      stroke: rgba(178,189,223,0.3);
+    }
+
+    .grid line {
+      stroke: rgba(178,189,223,0.1);
+      stroke-dasharray: 2,2;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: rgba(17,24,46,0.95);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    .tooltip-title {
+      font-weight: 600;
+      color: var(--accent2);
+      margin-bottom: 6px;
+    }
+
+    .tooltip-detail {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* Interactive controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(122,162,255,0.5);
+      background: rgba(17,24,46,0.6);
+      color: var(--ink);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .control-btn:hover {
+      background: rgba(122,162,255,0.2);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .control-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      margin: 25px 0;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    /* Stat highlights */
+    .stat-highlight {
+      background: rgba(122,162,255,0.1);
+      border-left: 3px solid var(--accent2);
+      padding: 20px 30px;
+      margin: 30px 0;
+      border-radius: 4px;
+    }
+
+    .stat-highlight strong {
+      color: var(--accent2);
+      font-size: 1.8rem;
+      font-family: 'Fraunces', Georgia, serif;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      text-align: center;
+      padding: 80px 20px;
+      background: linear-gradient(to bottom, rgba(5,8,22,0.5), rgba(17,24,46,0.8));
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 40px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), #a0b8ff);
+      color: var(--bg);
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 10px 30px rgba(122,162,255,0.3);
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(122,162,255,0.5);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .section {
+        padding: 60px 15px;
+      }
+
+      .viz-container {
+        padding: 20px;
+      }
+
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Loading animation */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 20px auto;
+      border: 3px solid rgba(122,162,255,0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip">
+    <div class="tooltip-title"></div>
+    <div class="tooltip-detail"></div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero-section section visible">
+    <div class="hero-content">
+      <div class="hero-badge">Data Story</div>
+      <h1 class="hero-title">Understanding the<br>1989 Loma Prieta Earthquake</h1>
+      <p class="hero-subtitle">
+        Through 30,000+ seismic events across three years,<br>
+        we trace the story hidden in the data
+      </p>
+
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-value">6.9</div>
+          <div class="stat-label">Magnitude</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">63</div>
+          <div class="stat-label">Lives Lost</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$6B</div>
+          <div class="stat-label">Damage Cost</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-events">30,079</div>
+          <div class="stat-label">Seismic Events</div>
+        </div>
+      </div>
+
+      <div class="scroll-indicator">↓ Scroll to explore the data</div>
+    </div>
+  </section>
+
+  <!-- Section 1: Timeline Overview -->
+  <section class="section" id="section-timeline">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">01 — Timeline</div>
+        <h2>Three Years of Seismic Activity</h2>
+        <p class="section-description">
+          From January 1988 to December 1990, thousands of earthquakes shook the region.
+          The mainshock on October 17, 1989 stands out dramatically.
+        </p>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-timeline">
+          <div class="spinner"></div>
+          <p>Loading timeline data...</p>
+        </div>
+        <div id="timeline-viz" style="display:none;"></div>
+      </div>
+
+      <div class="stat-highlight">
+        The <strong>6.9 magnitude mainshock</strong> released approximately <strong>15 times more energy</strong> than all other recorded events in this period combined.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Magnitude Distribution -->
+  <section class="section" id="section-magnitude">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">02 — Scale</div>
+        <h2>A Sea of Small Quakes,<br>One Giant</h2>
+        <p class="section-description">
+          Most earthquakes are barely noticeable. But the distribution reveals<br>
+          how rare and powerful the mainshock truly was.
+        </p>
+      </div>
+
+      <div class="controls">
+        <button class="control-btn active" data-view="all">All Events</button>
+        <button class="control-btn" data-view="magnitude">By Magnitude Range</button>
+        <button class="control-btn" data-view="depth">By Depth</button>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-magnitude">
+          <div class="spinner"></div>
+          <p>Loading magnitude data...</p>
+        </div>
+        <div id="magnitude-viz" style="display:none;"></div>
+      </div>
+
+      <div class="legend" id="magnitude-legend"></div>
+
+      <div class="stat-highlight">
+        <strong>29,587</strong> earthquakes were magnitude 2.0 or less — small tremors often unfelt by humans. Only <strong>23</strong> exceeded magnitude 4.0.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Before and After -->
+  <section class="section" id="section-comparison">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">03 — Impact</div>
+        <h2>The Dramatic Shift:<br>Before & After</h2>
+        <p class="section-description">
+          The earthquake didn't just strike once — it triggered thousands of aftershocks<br>
+          that continued for months.
+        </p>
+      </div>
+
+      <div class="controls">
+        <button class="control-btn active" data-period="all">Show All</button>
+        <button class="control-btn" data-period="before">Before Oct 17</button>
+        <button class="control-btn" data-period="mainshock">Oct 17-18</button>
+        <button class="control-btn" data-period="after">After Oct 18</button>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-comparison">
+          <div class="spinner"></div>
+          <p>Loading comparison data...</p>
+        </div>
+        <div id="comparison-viz" style="display:none;"></div>
+      </div>
+
+      <div class="stat-highlight">
+        In the <strong>48 hours</strong> following the mainshock, there were <strong>1,237 aftershocks</strong> — more seismic events than the entire previous year.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Spatial Distribution -->
+  <section class="section" id="section-spatial">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">04 — Geography</div>
+        <h2>The Fault's Fingerprint</h2>
+        <p class="section-description">
+          Plotting earthquake locations reveals the San Andreas fault system's geometry.<br>
+          The mainshock epicenter sits at the heart of a complex seismic zone.
+        </p>
+      </div>
+
+      <div class="controls">
+        <button class="control-btn active" data-layer="all">All Earthquakes</button>
+        <button class="control-btn" data-layer="mainshock">Mainshock Only</button>
+        <button class="control-btn" data-layer="aftershocks">Aftershocks</button>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-spatial">
+          <div class="spinner"></div>
+          <p>Loading spatial data...</p>
+        </div>
+        <div id="spatial-viz" style="display:none;"></div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--danger);"></div>
+          <span>Mainshock (M 6.9)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--warning);"></div>
+          <span>M 4.0+</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--accent);"></div>
+          <span>M 3.0 - 3.9</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: rgba(122,162,255,0.4);"></div>
+          <span>M &lt; 3.0</span>
+        </div>
+      </div>
+
+      <div class="stat-highlight">
+        The mainshock epicenter: <strong>37.04°N, 121.88°W</strong> in the Santa Cruz Mountains, at a depth of <strong>17.2 km</strong> below the surface.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Depth Analysis -->
+  <section class="section" id="section-depth">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">05 — Subsurface</div>
+        <h2>Deep Underground:<br>Depth Patterns</h2>
+        <p class="section-description">
+          Earthquakes don't just vary in location — they occur at different depths.<br>
+          This reveals information about fault structure and crustal stress.
+        </p>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-depth">
+          <div class="spinner"></div>
+          <p>Loading depth data...</p>
+        </div>
+        <div id="depth-viz" style="display:none;"></div>
+      </div>
+
+      <div class="stat-highlight">
+        Most earthquakes cluster between <strong>5-10 km depth</strong>. The mainshock occurred deeper at <strong>17.2 km</strong>, releasing energy from within the brittle crust.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Cumulative Energy -->
+  <section class="section" id="section-energy">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">06 — Energy</div>
+        <h2>The Power Unleashed</h2>
+        <p class="section-description">
+          While we count thousands of earthquakes, one event dominated the energy release.<br>
+          This chart shows cumulative seismic energy over time.
+        </p>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-energy">
+          <div class="spinner"></div>
+          <p>Calculating energy release...</p>
+        </div>
+        <div id="energy-viz" style="display:none;"></div>
+      </div>
+
+      <div class="stat-highlight">
+        The mainshock released energy equivalent to approximately <strong>475 kilotons of TNT</strong> — about 32 times the atomic bomb dropped on Hiroshima.
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="cta-section">
+    <div class="content-wrapper">
+      <div class="section-number">Now Enter the Story</div>
+      <h2 style="margin-bottom: 30px;">Experience the Full Timeline</h2>
+      <p class="section-description" style="margin-bottom: 50px;">
+        You've seen the data. Now experience the human story through historical media,<br>
+        eyewitness accounts, and interactive timelines.
+      </p>
+      <a href="final_story-mode.html" class="cta-btn">
+        Enter Story Mode
+        <span>→</span>
+      </a>
+    </div>
+  </section>
+
+  <script>
+    // Constants
+    const MAINSHOCK_TIME = new Date('1989-10-18T00:04:15.190Z');
+    const MAINSHOCK_LAT = 37.0361667;
+    const MAINSHOCK_LON = -121.8798333;
+
+    // Load and parse data
+    let earthquakeData = [];
+
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+      threshold: 0.2,
+      rootMargin: '0px 0px -100px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.section').forEach(section => {
+      observer.observe(section);
+    });
+
+    // Load CSV data
+    d3.csv('../dataset/us_loma_prieta_1988_1990_allmags.csv').then(data => {
+      // Parse and filter data
+      earthquakeData = data
+        .filter(d => d.type === 'earthquake')
+        .map(d => ({
+          time: new Date(d.time),
+          lat: +d.latitude,
+          lon: +d.longitude,
+          depth: +d.depth,
+          mag: +d.mag,
+          place: d.place
+        }))
+        .filter(d => !isNaN(d.mag) && !isNaN(d.depth));
+
+      // Update total count
+      document.getElementById('total-events').textContent = earthquakeData.length.toLocaleString();
+
+      // Initialize visualizations
+      initTimeline();
+      initMagnitudeViz();
+      initComparison();
+      initSpatial();
+      initDepth();
+      initEnergy();
+    });
+
+    // Tooltip functions
+    const tooltip = d3.select('#tooltip');
+
+    function showTooltip(event, content) {
+      tooltip.select('.tooltip-title').html(content.title);
+      tooltip.select('.tooltip-detail').html(content.detail);
+      tooltip
+        .style('left', (event.pageX + 15) + 'px')
+        .style('top', (event.pageY - 15) + 'px')
+        .classed('visible', true);
+    }
+
+    function hideTooltip() {
+      tooltip.classed('visible', false);
+    }
+
+    // 1. Timeline Visualization
+    function initTimeline() {
+      const container = d3.select('#timeline-viz');
+      const width = 800;
+      const height = 400;
+      const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      // Aggregate by day
+      const dayFormat = d3.timeDay;
+      const dailyCounts = d3.rollup(
+        earthquakeData,
+        v => v.length,
+        d => dayFormat(d.time)
+      );
+
+      const timelineData = Array.from(dailyCounts, ([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date - b.date);
+
+      const x = d3.scaleTime()
+        .domain(d3.extent(timelineData, d => d.date))
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(timelineData, d => d.count)])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+      // Grid
+      svg.append('g')
+        .attr('class', 'grid')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).tickSize(-(height - margin.top - margin.bottom)).tickFormat(''));
+
+      // Axes
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(10));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+
+      // Y-axis label
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 15)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Earthquakes per Day');
+
+      // Line
+      const line = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.count))
+        .curve(d3.curveMonotoneX);
+
+      svg.append('path')
+        .datum(timelineData)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent)')
+        .attr('stroke-width', 2)
+        .attr('d', line);
+
+      // Mainshock marker
+      const mainshockDate = dayFormat(MAINSHOCK_TIME);
+      svg.append('line')
+        .attr('x1', x(mainshockDate))
+        .attr('x2', x(mainshockDate))
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', 'var(--danger)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,4');
+
+      svg.append('text')
+        .attr('x', x(mainshockDate))
+        .attr('y', margin.top - 10)
+        .attr('fill', 'var(--danger)')
+        .attr('font-size', '12px')
+        .attr('font-weight', '600')
+        .style('text-anchor', 'middle')
+        .text('Oct 17, 1989');
+
+      document.getElementById('loading-timeline').style.display = 'none';
+      container.style('display', 'block');
+    }
+
+    // 2. Magnitude Distribution
+    function initMagnitudeViz() {
+      const container = d3.select('#magnitude-viz');
+      const width = 800;
+      const height = 500;
+      const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      let currentView = 'all';
+
+      function updateView(view) {
+        currentView = view;
+        svg.selectAll('*').remove();
+
+        if (view === 'all') {
+          drawBubbleChart();
+        } else if (view === 'magnitude') {
+          drawHistogram();
+        } else if (view === 'depth') {
+          drawDepthMagnitude();
+        }
+      }
+
+      function drawBubbleChart() {
+        // Pack layout for all earthquakes
+        const maxRadius = 8;
+        const data = earthquakeData.map(d => ({
+          ...d,
+          radius: Math.max(1, Math.pow(10, d.mag) / 2000)
+        }));
+
+        const simulation = d3.forceSimulation(data)
+          .force('x', d3.forceX(width / 2).strength(0.05))
+          .force('y', d3.forceY(height / 2).strength(0.05))
+          .force('collide', d3.forceCollide(d => d.radius + 0.5))
+          .stop();
+
+        for (let i = 0; i < 300; i++) simulation.tick();
+
+        const colorScale = d3.scaleSequential(d3.interpolateRgb('#7aa2ff', '#a3ffcd'))
+          .domain([0, d3.max(data, d => d.mag)]);
+
+        const circles = svg.selectAll('circle')
+          .data(data)
+          .join('circle')
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y)
+          .attr('r', 0)
+          .attr('fill', d => d.mag === 6.9 ? 'var(--danger)' : colorScale(d.mag))
+          .attr('opacity', d => d.mag === 6.9 ? 1 : 0.6)
+          .attr('stroke', d => d.mag === 6.9 ? 'var(--danger)' : 'none')
+          .attr('stroke-width', 2)
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: `Magnitude ${d.mag.toFixed(2)}`,
+              detail: `${d.place}<br>Depth: ${d.depth.toFixed(1)} km<br>${d.time.toLocaleDateString()}`
+            });
+          })
+          .on('mouseout', hideTooltip);
+
+        circles.transition()
+          .duration(800)
+          .delay((d, i) => i * 0.5)
+          .attr('r', d => d.radius);
+
+        // Legend
+        updateLegend([
+          { color: 'var(--danger)', label: 'M 6.9 Mainshock' },
+          { color: colorScale(4), label: 'M 4.0+' },
+          { color: colorScale(2), label: 'M 2.0 - 3.9' },
+          { color: colorScale(0.5), label: 'M < 2.0' }
+        ]);
+      }
+
+      function drawHistogram() {
+        const bins = d3.bin()
+          .domain([0, 7])
+          .thresholds(d3.range(0, 7.5, 0.5))
+          (earthquakeData.map(d => d.mag));
+
+        const x = d3.scaleBand()
+          .domain(bins.map(d => d.x0))
+          .range([margin.left, width - margin.right])
+          .padding(0.1);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(bins, d => d.length)])
+          .nice()
+          .range([height - margin.bottom, margin.top]);
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(0,${height - margin.bottom})`)
+          .call(d3.axisBottom(x).tickValues(d3.range(0, 7.5, 1)));
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y));
+
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height - 10)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Magnitude');
+
+        svg.append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -(height / 2))
+          .attr('y', 15)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Number of Earthquakes');
+
+        svg.selectAll('rect')
+          .data(bins)
+          .join('rect')
+          .attr('x', d => x(d.x0))
+          .attr('y', height - margin.bottom)
+          .attr('width', x.bandwidth())
+          .attr('height', 0)
+          .attr('fill', d => d.x0 >= 6.5 ? 'var(--danger)' : 'var(--accent)')
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: `${d.length.toLocaleString()} earthquakes`,
+              detail: `Magnitude ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)}`
+            });
+          })
+          .on('mouseout', hideTooltip)
+          .transition()
+          .duration(800)
+          .attr('y', d => y(d.length))
+          .attr('height', d => height - margin.bottom - y(d.length));
+
+        updateLegend([]);
+      }
+
+      function drawDepthMagnitude() {
+        const x = d3.scaleLinear()
+          .domain([0, 7])
+          .range([margin.left, width - margin.right]);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(earthquakeData, d => d.depth)])
+          .range([margin.top, height - margin.bottom]);
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(0,${height - margin.bottom})`)
+          .call(d3.axisBottom(x));
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y));
+
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height - 10)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Magnitude');
+
+        svg.append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -(height / 2))
+          .attr('y', 15)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Depth (km)');
+
+        svg.selectAll('circle')
+          .data(earthquakeData)
+          .join('circle')
+          .attr('cx', d => x(d.mag))
+          .attr('cy', d => y(d.depth))
+          .attr('r', 0)
+          .attr('fill', d => d.mag === 6.9 ? 'var(--danger)' : 'var(--accent)')
+          .attr('opacity', 0.5)
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: `M ${d.mag.toFixed(2)}`,
+              detail: `Depth: ${d.depth.toFixed(1)} km`
+            });
+          })
+          .on('mouseout', hideTooltip)
+          .transition()
+          .duration(600)
+          .delay((d, i) => i * 0.3)
+          .attr('r', 2);
+
+        updateLegend([]);
+      }
+
+      // Control buttons
+      d3.selectAll('#section-magnitude .control-btn').on('click', function() {
+        d3.selectAll('#section-magnitude .control-btn').classed('active', false);
+        d3.select(this).classed('active', true);
+        const view = this.dataset.view;
+        updateView(view);
+      });
+
+      function updateLegend(items) {
+        const legend = d3.select('#magnitude-legend');
+        legend.selectAll('*').remove();
+
+        items.forEach(item => {
+          const div = legend.append('div').attr('class', 'legend-item');
+          div.append('div').attr('class', 'legend-color').style('background', item.color);
+          div.append('span').text(item.label);
+        });
+      }
+
+      updateView('all');
+      document.getElementById('loading-magnitude').style.display = 'none';
+      container.style('display', 'block');
+    }
+
+    // 3. Before/After Comparison
+    function initComparison() {
+      const container = d3.select('#comparison-viz');
+      const width = 800;
+      const height = 400;
+      const margin = { top: 40, right: 40, bottom: 80, left: 80 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      const mainshockStart = new Date('1989-10-17T00:00:00Z');
+      const mainshockEnd = new Date('1989-10-19T00:00:00Z');
+
+      const periods = {
+        before: earthquakeData.filter(d => d.time < mainshockStart),
+        mainshock: earthquakeData.filter(d => d.time >= mainshockStart && d.time < mainshockEnd),
+        after: earthquakeData.filter(d => d.time >= mainshockEnd)
+      };
+
+      function updateComparison(period) {
+        svg.selectAll('*').remove();
+
+        let data;
+        if (period === 'all') {
+          data = [
+            { label: 'Before\nOct 17', count: periods.before.length, color: 'var(--accent)' },
+            { label: 'Oct 17-18\nMainshock', count: periods.mainshock.length, color: 'var(--danger)' },
+            { label: 'After\nOct 18', count: periods.after.length, color: 'var(--accent2)' }
+          ];
+        } else if (period === 'before') {
+          data = [{ label: 'Before Oct 17', count: periods.before.length, color: 'var(--accent)' }];
+        } else if (period === 'mainshock') {
+          data = [{ label: 'Oct 17-18', count: periods.mainshock.length, color: 'var(--danger)' }];
+        } else {
+          data = [{ label: 'After Oct 18', count: periods.after.length, color: 'var(--accent2)' }];
+        }
+
+        const x = d3.scaleBand()
+          .domain(data.map(d => d.label))
+          .range([margin.left, width - margin.right])
+          .padding(0.2);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(data, d => d.count)])
+          .nice()
+          .range([height - margin.bottom, margin.top]);
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(0,${height - margin.bottom})`)
+          .call(d3.axisBottom(x));
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y));
+
+        svg.append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -(height / 2))
+          .attr('y', 20)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Number of Earthquakes');
+
+        svg.selectAll('rect')
+          .data(data)
+          .join('rect')
+          .attr('x', d => x(d.label))
+          .attr('y', height - margin.bottom)
+          .attr('width', x.bandwidth())
+          .attr('height', 0)
+          .attr('fill', d => d.color)
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: d.label.replace('\n', ' '),
+              detail: `${d.count.toLocaleString()} earthquakes`
+            });
+          })
+          .on('mouseout', hideTooltip)
+          .transition()
+          .duration(800)
+          .attr('y', d => y(d.count))
+          .attr('height', d => height - margin.bottom - y(d.count));
+
+        // Add count labels on bars
+        svg.selectAll('.count-label')
+          .data(data)
+          .join('text')
+          .attr('class', 'count-label')
+          .attr('x', d => x(d.label) + x.bandwidth() / 2)
+          .attr('y', d => y(d.count) - 10)
+          .attr('fill', 'var(--ink)')
+          .attr('font-size', '16px')
+          .attr('font-weight', '600')
+          .style('text-anchor', 'middle')
+          .text(d => d.count.toLocaleString())
+          .attr('opacity', 0)
+          .transition()
+          .delay(800)
+          .duration(400)
+          .attr('opacity', 1);
+      }
+
+      d3.selectAll('#section-comparison .control-btn').on('click', function() {
+        d3.selectAll('#section-comparison .control-btn').classed('active', false);
+        d3.select(this).classed('active', true);
+        const period = this.dataset.period;
+        updateComparison(period);
+      });
+
+      updateComparison('all');
+      document.getElementById('loading-comparison').style.display = 'none';
+      container.style('display', 'block');
+    }
+
+    // 4. Spatial Distribution
+    function initSpatial() {
+      const container = d3.select('#spatial-viz');
+      const width = 800;
+      const height = 500;
+      const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(earthquakeData, d => d.lon))
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleLinear()
+        .domain(d3.extent(earthquakeData, d => d.lat))
+        .range([height - margin.bottom, margin.top]);
+
+      const mainshock = earthquakeData.find(d => d.mag === 6.9);
+      const aftershocks = earthquakeData.filter(d => d.time > MAINSHOCK_TIME && d.time < new Date('1990-01-01'));
+
+      function updateLayer(layer) {
+        svg.selectAll('.earthquake-dot').remove();
+
+        let data;
+        if (layer === 'all') {
+          data = earthquakeData;
+        } else if (layer === 'mainshock') {
+          data = [mainshock];
+        } else {
+          data = aftershocks;
+        }
+
+        svg.selectAll('.earthquake-dot')
+          .data(data)
+          .join('circle')
+          .attr('class', 'earthquake-dot')
+          .attr('cx', d => x(d.lon))
+          .attr('cy', d => y(d.lat))
+          .attr('r', d => {
+            if (d.mag === 6.9) return 12;
+            if (d.mag >= 4) return 5;
+            if (d.mag >= 3) return 3;
+            return 1.5;
+          })
+          .attr('fill', d => {
+            if (d.mag === 6.9) return 'var(--danger)';
+            if (d.mag >= 4) return 'var(--warning)';
+            if (d.mag >= 3) return 'var(--accent)';
+            return 'rgba(122,162,255,0.4)';
+          })
+          .attr('stroke', d => d.mag === 6.9 ? 'white' : 'none')
+          .attr('stroke-width', 2)
+          .attr('opacity', 0)
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: `M ${d.mag.toFixed(2)}`,
+              detail: `${d.place}<br>Depth: ${d.depth.toFixed(1)} km`
+            });
+          })
+          .on('mouseout', hideTooltip)
+          .transition()
+          .duration(600)
+          .delay((d, i) => i * 0.5)
+          .attr('opacity', d => d.mag === 6.9 ? 1 : 0.6);
+      }
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(5));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5));
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 5)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Longitude');
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 15)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Latitude');
+
+      d3.selectAll('#section-spatial .control-btn').on('click', function() {
+        d3.selectAll('#section-spatial .control-btn').classed('active', false);
+        d3.select(this).classed('active', true);
+        const layer = this.dataset.layer;
+        updateLayer(layer);
+      });
+
+      updateLayer('all');
+      document.getElementById('loading-spatial').style.display = 'none';
+      container.style('display', 'block');
+    }
+
+    // 5. Depth Distribution
+    function initDepth() {
+      const container = d3.select('#depth-viz');
+      const width = 800;
+      const height = 400;
+      const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      const bins = d3.bin()
+        .domain([0, d3.max(earthquakeData, d => d.depth)])
+        .thresholds(20)
+        (earthquakeData.map(d => d.depth));
+
+      const x = d3.scaleBand()
+        .domain(bins.map((d, i) => i))
+        .range([margin.left, width - margin.right])
+        .padding(0.1);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, d => d.length)])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x)
+          .tickValues([0, 5, 10, 15, 19])
+          .tickFormat(i => `${bins[i] ? bins[i].x0.toFixed(0) : ''}`));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 10)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Depth (km)');
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 15)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Number of Earthquakes');
+
+      svg.selectAll('rect')
+        .data(bins)
+        .join('rect')
+        .attr('x', (d, i) => x(i))
+        .attr('y', height - margin.bottom)
+        .attr('width', x.bandwidth())
+        .attr('height', 0)
+        .attr('fill', 'var(--accent)')
+        .on('mouseover', (event, d) => {
+          showTooltip(event, {
+            title: `${d.length.toLocaleString()} earthquakes`,
+            detail: `Depth ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)} km`
+          });
+        })
+        .on('mouseout', hideTooltip)
+        .transition()
+        .duration(800)
+        .delay((d, i) => i * 30)
+        .attr('y', d => y(d.length))
+        .attr('height', d => height - margin.bottom - y(d.length));
+
+      // Mainshock depth marker
+      const mainshockDepth = 17.214;
+      const mainshockBin = bins.findIndex(b => mainshockDepth >= b.x0 && mainshockDepth < b.x1);
+      
+      svg.append('line')
+        .attr('x1', x(mainshockBin) + x.bandwidth() / 2)
+        .attr('x2', x(mainshockBin) + x.bandwidth() / 2)
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', 'var(--danger)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,4')
+        .attr('opacity', 0)
+        .transition()
+        .delay(1000)
+        .duration(400)
+        .attr('opacity', 1);
+
+      svg.append('text')
+        .attr('x', x(mainshockBin) + x.bandwidth() / 2)
+        .attr('y', margin.top - 10)
+        .attr('fill', 'var(--danger)')
+        .attr('font-size', '11px')
+        .attr('font-weight', '600')
+        .style('text-anchor', 'middle')
+        .text('Mainshock')
+        .attr('opacity', 0)
+        .transition()
+        .delay(1200)
+        .duration(400)
+        .attr('opacity', 1);
+
+      document.getElementById('loading-depth').style.display = 'none';
+      container.style('display', 'block');
+    }
+
+    // 6. Energy Release
+    function initEnergy() {
+      const container = d3.select('#energy-viz');
+      const width = 800;
+      const height = 400;
+      const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      // Calculate energy (simplified): E ≈ 10^(1.5*M + 4.8) joules
+      // We'll use relative units for visualization
+      const sortedData = [...earthquakeData].sort((a, b) => a.time - b.time);
+      
+      let cumEnergy = 0;
+      const energyData = sortedData.map(d => {
+        const energy = Math.pow(10, 1.5 * d.mag);
+        cumEnergy += energy;
+        return {
+          time: d.time,
+          cumEnergy: cumEnergy,
+          mag: d.mag
+        };
+      });
+
+      const x = d3.scaleTime()
+        .domain(d3.extent(energyData, d => d.time))
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(energyData, d => d.cumEnergy)])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(8));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.2s')));
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 15)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Cumulative Seismic Energy (relative)');
+
+      // Area chart
+      const area = d3.area()
+        .x(d => x(d.time))
+        .y0(height - margin.bottom)
+        .y1(d => y(d.cumEnergy))
+        .curve(d3.curveMonotoneX);
+
+      const path = svg.append('path')
+        .datum(energyData)
+        .attr('fill', 'url(#energy-gradient)')
+        .attr('d', area);
+
+      // Gradient
+      const gradient = svg.append('defs')
+        .append('linearGradient')
+        .attr('id', 'energy-gradient')
+        .attr('x1', '0%')
+        .attr('y1', '0%')
+        .attr('x2', '0%')
+        .attr('y2', '100%');
+
+      gradient.append('stop')
+        .attr('offset', '0%')
+        .attr('stop-color', 'var(--accent)')
+        .attr('stop-opacity', 0.8);
+
+      gradient.append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', 'var(--accent)')
+        .attr('stop-opacity', 0.1);
+
+      // Animate
+      const pathLength = path.node().getTotalLength();
+      path
+        .attr('stroke-dasharray', pathLength)
+        .attr('stroke-dashoffset', pathLength)
+        .transition()
+        .duration(2000)
+        .attr('stroke-dashoffset', 0);
+
+      // Mainshock marker
+      svg.append('line')
+        .attr('x1', x(MAINSHOCK_TIME))
+        .attr('x2', x(MAINSHOCK_TIME))
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', 'var(--danger)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,4')
+        .attr('opacity', 0)
+        .transition()
+        .delay(1500)
+        .duration(400)
+        .attr('opacity', 1);
+
+      svg.append('text')
+        .attr('x', x(MAINSHOCK_TIME))
+        .attr('y', margin.top - 10)
+        .attr('fill', 'var(--danger)')
+        .attr('font-size', '12px')
+        .attr('font-weight', '600')
+        .style('text-anchor', 'middle')
+        .text('Oct 17, 1989')
+        .attr('opacity', 0)
+        .transition()
+        .delay(1700)
+        .duration(400)
+        .attr('opacity', 1);
+
+      document.getElementById('loading-energy').style.display = 'none';
+      container.style('display', 'block');
+    }
+  </script>
+</body>
+</html>
