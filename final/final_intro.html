@@ -300,6 +300,64 @@
       border-radius: 50%;
     }
 
+    /* Magnitude layout & summary */
+    .mag-flex-inner {
+      display: block;
+    }
+
+    #magnitude-viz {
+      width: 100%;
+    }
+
+    /* We no longer show the separate summary cards */
+    #magnitude-summary {
+      display: none;
+    }
+
+    .mag-summary-title {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .mag-summary-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: space-between;
+      min-height: 320px;
+    }
+
+    .mag-summary-card {
+      background: rgba(17,24,46,0.7);
+      border-radius: 10px;
+      border: 1px solid rgba(122,162,255,0.3);
+      padding: 10px 12px;
+    }
+
+    .mag-summary-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .mag-summary-count {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.1rem;
+      color: var(--accent2);
+    }
+
+    .mag-summary-pct {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 768px) {
+      .mag-flex-inner {
+        flex-direction: column;
+      }
+    }
+
     /* Stat highlights */
     .stat-highlight {
       background: rgba(122,162,255,0.1);
@@ -455,17 +513,12 @@
     <div class="content-wrapper">
       <div class="section-header">
         <div class="section-number">02 — Scale</div>
-        <h2>A Sea of Small Quakes,<br>One Giant</h2>
+        <h2>Thousands of Tiny Quakes,<br>One Giant Shock</h2>
         <p class="section-description">
-          Most earthquakes are barely noticeable. But the distribution reveals<br>
-          how rare and powerful the mainshock truly was.
+          Each dot below is one earthquake between June 1988 and June 1990. Most are tiny
+          M&lt;2.0 tremors that barely reach the surface, while a handful of larger events —
+          including the M6.9 mainshock — tower above the crowd.
         </p>
-      </div>
-
-      <div class="controls">
-        <button class="control-btn active" data-view="all">All Events</button>
-        <button class="control-btn" data-view="magnitude">By Magnitude Range</button>
-        <button class="control-btn" data-view="depth">By Depth</button>
       </div>
 
       <div class="viz-container">
@@ -473,46 +526,55 @@
           <div class="spinner"></div>
           <p>Loading magnitude data...</p>
         </div>
-        <div id="magnitude-viz" style="display:none;"></div>
+
+        <!-- Scatter + numeric summary side by side -->
+        <div id="magnitude-flex" class="mag-flex-inner" style="display:none;">
+          <div id="magnitude-viz"></div>
+          <div id="magnitude-summary"></div>
+        </div>
       </div>
 
       <div class="legend" id="magnitude-legend"></div>
 
       <div class="stat-highlight">
-        Out of all recorded earthquakes in this period, <strong>25,466</strong> — nearly <strong>89%</strong> — were magnitude 2.0 or less, tiny tremors often unfelt by humans. Only <strong>75</strong> events exceeded magnitude 4.0, and just <strong>7</strong> (about <strong>0.02%</strong>) reached magnitude 5.0 or higher.
+        Out of all recorded earthquakes in this period, <strong>25,466</strong> — nearly
+        <strong>89%</strong> — were magnitude 2.0 or less, tiny tremors often unfelt by humans.
+        Only <strong>75</strong> events exceeded magnitude 4.0, and just <strong>7</strong>
+        (about <strong>0.02%</strong>) reached magnitude 5.0 or higher. The scatterplot above
+        makes this imbalance visible: a dense base of small quakes, with only a few larger dots
+        rising toward the top.
       </div>
     </div>
   </section>
 
-  <!-- Section 3: Before and After -->
+  <!-- Section 3: Depth – Magnitude vs Depth -->
   <section class="section" id="section-comparison">
     <div class="content-wrapper">
       <div class="section-header">
-        <div class="section-number">03 — Impact</div>
-        <h2>The Dramatic Shift:<br>Before & After</h2>
+        <div class="section-number">03 — Depth</div>
+        <h2>Shallow Swarms,<br>Deeper Shock</h2>
         <p class="section-description">
-          The earthquake didn't just strike once — it triggered thousands of aftershocks<br>
-          that continued for months.
+          Earthquakes in this sequence did not all occur at the same depth. Plotting magnitude
+          against depth reveals a cloud of shallow, small events near the surface and a deeper
+          M6.9 mainshock that ruptured lower in the crust.
         </p>
-      </div>
-
-      <div class="controls">
-        <button class="control-btn active" data-period="all">Show All</button>
-        <button class="control-btn" data-period="before">Before Oct 17</button>
-        <button class="control-btn" data-period="mainshock">Oct 17-18</button>
-        <button class="control-btn" data-period="after">After Oct 18</button>
       </div>
 
       <div class="viz-container">
         <div class="loading" id="loading-comparison">
           <div class="spinner"></div>
-          <p>Loading comparison data...</p>
+          <p>Loading depth data...</p>
         </div>
         <div id="comparison-viz" style="display:none;"></div>
       </div>
 
       <div class="stat-highlight">
-        In the <strong>48 hours</strong> after the mainshock, there were <strong>1,576 earthquakes</strong> — around <strong>37 times</strong> more than in the 48 hours before it.
+        On average, earthquakes in this sequence occurred about
+        <strong>5.4 km (≈3.3 mi)</strong> beneath the surface. Most events cluster within the
+        upper <strong>10 km (≈6 mi)</strong> of the crust as tiny M2–3 tremors. The
+        <strong>M6.9</strong> mainshock, by contrast, struck deeper at about
+        <strong>17.2 km (≈10.7 mi)</strong>, near the base of this swarm — a deeper rupture
+        that then drove thousands of shallower aftershocks above it.
       </div>
     </div>
   </section>
@@ -1079,245 +1141,200 @@
       container.style('display', 'block');
     }
 
-    // 2. Magnitude Distribution
+    // 2. Magnitude Visualization
     function initMagnitudeViz() {
-      const container = d3.select('#magnitude-viz');
       const width = 800;
       const height = 500;
       const margin = { top: 40, right: 40, bottom: 60, left: 60 };
 
-      const svg = container.append('svg')
+      // Reserve some space on the right for inline labels
+      const LABEL_GUTTER = 90;
+      const plotRight = width - margin.right - LABEL_GUTTER;
+      const plotWidth = plotRight - margin.left;
+
+      const flex = d3.select('#magnitude-flex');
+      const svgContainer = d3.select('#magnitude-viz');
+      const summaryContainer = d3.select('#magnitude-summary'); // currently hidden by CSS
+
+      const svg = svgContainer.append('svg')
         .attr('width', width)
         .attr('height', height)
         .attr('viewBox', `0 0 ${width} ${height}`)
         .attr('style', 'max-width: 100%; height: auto;');
 
-      let currentView = 'all';
+      const data = earthquakeData;
 
-      function updateView(view) {
-        currentView = view;
-        svg.selectAll('*').remove();
+      // Magnitude extent and mainshock
+      const magExtent = d3.extent(data, d => d.mag);
+      const mainshock = data.reduce((a, b) => (b.mag > a.mag ? b : a), data[0]);
 
-        if (view === 'all') {
-          drawBubbleChart();
-        } else if (view === 'magnitude') {
-          drawHistogram();
-        } else if (view === 'depth') {
-          drawDepthMagnitude();
-        }
-      }
+      // Magnitude bins + counts
+      const magBins = [
+        { label: 'M < 2.0',   min: -Infinity, max: 2.0,      color: 'rgba(122,162,255,0.6)' },
+        { label: 'M 2.0–3.9', min: 2.0,       max: 4.0,      color: 'var(--accent2)' },
+        { label: 'M 4.0–4.9', min: 4.0,       max: 5.0,      color: 'rgba(255,184,108,0.95)' },
+        { label: 'M ≥ 5.0',   min: 5.0,       max: Infinity, color: 'var(--danger)' }
+      ];
 
-      function drawBubbleChart() {
-        // Pack layout for a sampled subset of earthquakes to keep this view responsive
-        const SAMPLE_SIZE = 2500;
-        const sample = earthquakeData.length > SAMPLE_SIZE
-          ? d3.shuffle(earthquakeData.slice()).slice(0, SAMPLE_SIZE)
-          : earthquakeData;
-
-        const maxRadius = 8;
-        const data = sample.map(d => ({
-          ...d,
-          radius: Math.max(1, Math.min(maxRadius, Math.pow(10, d.mag) / 2000))
-        }));
-
-        const simulation = d3.forceSimulation(data)
-          .force('x', d3.forceX(width / 2).strength(0.05))
-          .force('y', d3.forceY(height / 2).strength(0.05))
-          .force('collide', d3.forceCollide(d => d.radius + 0.5))
-          .stop();
-
-        for (let i = 0; i < 200; i++) simulation.tick();
-
-        const colorScale = d3.scaleSequential(d3.interpolateRgb('#7aa2ff', '#a3ffcd'))
-          .domain([0, d3.max(data, d => d.mag)]);
-
-        const circles = svg.selectAll('circle')
-          .data(data)
-          .join('circle')
-          .attr('cx', d => d.x)
-          .attr('cy', d => d.y)
-          .attr('r', 0)
-          .attr('fill', d => d.mag === 6.9 ? 'var(--danger)' : colorScale(d.mag))
-          .attr('opacity', d => d.mag === 6.9 ? 1 : 0.6)
-          .attr('stroke', d => d.mag === 6.9 ? 'var(--danger)' : 'none')
-          .attr('stroke-width', 2)
-          .on('mouseover', (event, d) => {
-            showTooltip(event, {
-              title: `Magnitude ${d.mag.toFixed(2)}`,
-              detail: `${d.place}<br>Depth: ${d.depth.toFixed(1)} km<br>${d.time.toLocaleDateString()}`
-            });
-          })
-          .on('mouseout', hideTooltip);
-
-        circles.transition()
-          .duration(800)
-          .delay(() => Math.random() * 200)
-          .attr('r', d => d.radius);
-
-        // Legend
-        updateLegend([
-          { color: 'var(--danger)', label: 'M 6.9 Mainshock' },
-          { color: colorScale(4), label: 'M 4.0+' },
-          { color: colorScale(2), label: 'M 2.0 - 3.9' },
-          { color: colorScale(0.5), label: 'M < 2.0' }
-        ]);
-      }
-
-      function drawHistogram() {
-        const bins = d3.bin()
-          .domain([0, 7])
-          .thresholds(d3.range(0, 7.5, 0.5))
-          (earthquakeData.map(d => d.mag));
-
-        const x = d3.scaleBand()
-          .domain(bins.map(d => d.x0))
-          .range([margin.left, width - margin.right])
-          .padding(0.1);
-
-        const y = d3.scaleLinear()
-          .domain([0, d3.max(bins, d => d.length)])
-          .nice()
-          .range([height - margin.bottom, margin.top]);
-
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(0,${height - margin.bottom})`)
-          .call(d3.axisBottom(x).tickValues(d3.range(0, 7.5, 1)));
-
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(${margin.left},0)`)
-          .call(d3.axisLeft(y));
-
-        svg.append('text')
-          .attr('x', width / 2)
-          .attr('y', height - 10)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '12px')
-          .style('text-anchor', 'middle')
-          .text('Magnitude');
-
-        svg.append('text')
-          .attr('transform', 'rotate(-90)')
-          .attr('x', -(height / 2))
-          .attr('y', 15)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '12px')
-          .style('text-anchor', 'middle')
-          .text('Number of Earthquakes');
-
-        svg.selectAll('rect')
-          .data(bins)
-          .join('rect')
-          .attr('x', d => x(d.x0))
-          .attr('y', height - margin.bottom)
-          .attr('width', x.bandwidth())
-          .attr('height', 0)
-          .attr('fill', d => d.x0 >= 6.5 ? 'var(--danger)' : 'var(--accent)')
-          .on('mouseover', (event, d) => {
-            showTooltip(event, {
-              title: `${d.length.toLocaleString()} earthquakes`,
-              detail: `Magnitude ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)}`
-            });
-          })
-          .on('mouseout', hideTooltip)
-          .transition()
-          .duration(800)
-          .attr('y', d => y(d.length))
-          .attr('height', d => height - margin.bottom - y(d.length));
-
-        updateLegend([]);
-      }
-
-      function drawDepthMagnitude() {
-        const x = d3.scaleLinear()
-          .domain([0, 7])
-          .range([margin.left, width - margin.right]);
-
-        const y = d3.scaleLinear()
-          .domain([0, d3.max(earthquakeData, d => d.depth)])
-          .range([margin.top, height - margin.bottom]);
-
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(0,${height - margin.bottom})`)
-          .call(d3.axisBottom(x));
-
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(${margin.left},0)`)
-          .call(d3.axisLeft(y));
-
-        svg.append('text')
-          .attr('x', width / 2)
-          .attr('y', height - 10)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '12px')
-          .style('text-anchor', 'middle')
-          .text('Magnitude');
-
-        svg.append('text')
-          .attr('transform', 'rotate(-90)')
-          .attr('x', -(height / 2))
-          .attr('y', 15)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '12px')
-          .style('text-anchor', 'middle')
-          .text('Depth (km)');
-
-        svg.selectAll('circle')
-          .data(earthquakeData)
-          .join('circle')
-          .attr('cx', d => x(d.mag))
-          .attr('cy', d => y(d.depth))
-          .attr('r', 0)
-          .attr('fill', d => d.mag === 6.9 ? 'var(--danger)' : 'var(--accent)')
-          .attr('opacity', 0.5)
-          .on('mouseover', (event, d) => {
-            showTooltip(event, {
-              title: `M ${d.mag.toFixed(2)}`,
-              detail: `Depth: ${d.depth.toFixed(1)} km`
-            });
-          })
-          .on('mouseout', hideTooltip)
-          .transition()
-          .duration(600)
-          .delay(() => Math.random() * 200)
-          .attr('r', 2);
-
-        updateLegend([]);
-      }
-
-      // Control buttons
-      d3.selectAll('#section-magnitude .control-btn').on('click', function() {
-        d3.selectAll('#section-magnitude .control-btn').classed('active', false);
-        d3.select(this).classed('active', true);
-        const view = this.dataset.view;
-        updateView(view);
+      const magCounts = magBins.map(bin => {
+        const count = data.filter(d => d.mag >= bin.min && d.mag < bin.max).length;
+        return {
+          ...bin,
+          count,
+          pct: (count / data.length) * 100
+        };
       });
+
+      function magColor(d) {
+        const bin = magBins.find(b => d.mag >= b.min && d.mag < b.max);
+        return bin ? bin.color : 'rgba(122,162,255,0.5)';
+      }
 
       function updateLegend(items) {
         const legend = d3.select('#magnitude-legend');
         legend.selectAll('*').remove();
-
         items.forEach(item => {
-          const div = legend.append('div').attr('class', 'legend-item');
-          div.append('div').attr('class', 'legend-color').style('background', item.color);
-          div.append('span').text(item.label);
+          const row = legend.append('div').attr('class', 'legend-item');
+          row.append('div')
+            .attr('class', 'legend-color')
+            .style('background', item.color);
+          row.append('span').text(item.label);
         });
       }
 
-      updateView('all');
+      // --- Scatter: "magnitude tower" ---
+      const x = d3.scaleLinear()
+        .domain([0, 1])
+        .range([margin.left, plotRight]);
+
+      const y = d3.scaleLinear()
+        .domain([0, Math.ceil(magExtent[1])])
+        .range([height - margin.bottom, margin.top]);
+
+      // Shaded magnitude bands
+      const bands = [
+        { y0: 0, y1: 2 },
+        { y0: 2, y1: 4 },
+        { y0: 4, y1: 5 },
+        { y0: 5, y1: 7 }
+      ];
+      const bandColors = [
+        'rgba(122,162,255,0.05)',
+        'rgba(122,255,255,0.05)',
+        'rgba(255,255,163,0.05)',
+        'rgba(255,107,107,0.07)'
+      ];
+
+      svg.selectAll('.band')
+        .data(bands)
+        .join('rect')
+        .attr('x', margin.left)
+        .attr('width', plotWidth)
+        .attr('y', d => y(d.y1))
+        .attr('height', d => y(d.y0) - y(d.y1))
+        .attr('fill', (d, i) => bandColors[i]);
+
+      // Axes
+      const yAxis = d3.axisLeft(y).ticks(8);
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(yAxis);
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Each dot = one earthquake');
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Magnitude');
+
+      const rScale = d3.scaleLinear()
+        .domain([magExtent[0], magExtent[1]])
+        .range([1.5, 9]);
+
+      // Draw all points once, highlight mainshock
+      const dots = svg.append('g')
+        .selectAll('circle')
+        .data(data)
+        .join('circle')
+        .attr('cx', d => x(Math.random()))
+        .attr('cy', d => y(d.mag))
+        .attr('r', d => rScale(d.mag))
+        .attr('fill', d => d === mainshock ? 'var(--danger)' : magColor(d))
+        .attr('stroke', d => d === mainshock ? 'white' : 'none')
+        .attr('stroke-width', d => d === mainshock ? 2 : 0)
+        .attr('opacity', d => d === mainshock ? 1 : 0.6)
+        .on('mouseover', (event, d) => {
+          showTooltip(event, {
+            title: `M ${d.mag.toFixed(1)}`,
+            detail: `${d.place}<br>Depth: ${d.depth.toFixed(1)} km<br>${d.time.toLocaleDateString()}`
+          });
+        })
+        .on('mouseout', hideTooltip);
+
+      dots.filter(d => d === mainshock).raise();
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', y(mainshock.mag) - 22)
+        .attr('fill', 'var(--danger)')
+        .attr('font-weight', '600')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text(`Mainshock M${mainshock.mag.toFixed(1)}`);
+
+      // Legend for magnitude ranges
+      updateLegend(magBins.map(b => ({ color: b.color, label: b.label })));
+
+      // --- Inline numeric labels on the right side of each band ---
+      const labelX = width - LABEL_GUTTER / 2;
+
+      bands.forEach((band, i) => {
+        const stats = magCounts[i];
+        if (!stats) return;
+
+        const midY = (y(band.y0) + y(band.y1)) / 2;
+
+        // Count in the band color
+        svg.append('text')
+          .attr('x', labelX)
+          .attr('y', midY - 4)
+          .attr('fill', magBins[i].color)
+          .attr('font-size', '13px')
+          .attr('font-weight', '600')
+          .style('text-anchor', 'middle')
+          .text(stats.count.toLocaleString());
+
+        // Percentage + label below, in muted text
+        svg.append('text')
+          .attr('x', labelX)
+          .attr('y', midY + 12)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '11px')
+          .style('text-anchor', 'middle')
+          .text(`${stats.pct.toFixed(1)}% · ${stats.label}`);
+      });
+
       document.getElementById('loading-magnitude').style.display = 'none';
-      container.style('display', 'block');
+      flex.style('display', 'block'); // mag-flex-inner is display:block in CSS
     }
 
-    // 3. Before/After Comparison
+    // 3. Depth: Magnitude vs Depth scatter
     function initComparison() {
       const container = d3.select('#comparison-viz');
       const width = 800;
       const height = 400;
-      const margin = { top: 40, right: 40, bottom: 80, left: 80 };
+      const margin = { top: 40, right: 40, bottom: 60, left: 70 };
 
       const svg = container.append('svg')
         .attr('width', width)
@@ -1325,109 +1342,189 @@
         .attr('viewBox', `0 0 ${width} ${height}`)
         .attr('style', 'max-width: 100%; height: auto;');
 
-      const mainshockStart = new Date('1989-10-17T00:00:00Z');
-      const mainshockEnd = new Date('1989-10-19T00:00:00Z');
+      const data = earthquakeData;
 
-      const periods = {
-        before: earthquakeData.filter(d => d.time < mainshockStart),
-        mainshock: earthquakeData.filter(d => d.time >= mainshockStart && d.time < mainshockEnd),
-        after: earthquakeData.filter(d => d.time >= mainshockEnd)
-      };
+      const magExtent = d3.extent(data, d => d.mag);
+      const depthExtent = d3.extent(data, d => d.depth);
+      const maxDepth = depthExtent[1];
+      const mainshock = data.reduce((a, b) => (b.mag > a.mag ? b : a), data[0]);
+      const meanDepth = d3.mean(data, d => d.depth);
+      const KM_TO_MI = 0.621371;
+      const meanDepthMi = meanDepth * KM_TO_MI;
+      const mainshockDepthMi = mainshock.depth * KM_TO_MI;
 
-      function updateComparison(period) {
-        svg.selectAll('*').remove();
+      const x = d3.scaleLinear()
+        .domain([0, maxDepth])
+        .nice()
+        .range([margin.left, width - margin.right]);
 
-        let data;
-        if (period === 'all') {
-          data = [
-            { label: 'Before\nOct 17', count: periods.before.length, color: 'var(--accent)' },
-            { label: 'Oct 17-18\nMainshock', count: periods.mainshock.length, color: 'var(--danger)' },
-            { label: 'After\nOct 18', count: periods.after.length, color: 'var(--accent2)' }
-          ];
-        } else if (period === 'before') {
-          data = [{ label: 'Before Oct 17', count: periods.before.length, color: 'var(--accent)' }];
-        } else if (period === 'mainshock') {
-          data = [{ label: 'Oct 17-18', count: periods.mainshock.length, color: 'var(--danger)' }];
-        } else {
-          data = [{ label: 'After Oct 18', count: periods.after.length, color: 'var(--accent2)' }];
-        }
+      const y = d3.scaleLinear()
+        .domain([0, Math.ceil(magExtent[1])])
+        .range([height - margin.bottom, margin.top]);
 
-        const x = d3.scaleBand()
-          .domain(data.map(d => d.label))
-          .range([margin.left, width - margin.right])
-          .padding(0.2);
+      // Shaded depth bands: upper crust / mid-crust / deeper
+      const depthBands = [
+        { x0: 0,  x1: 5 },
+        { x0: 5,  x1: 15 },
+        { x0: 15, x1: maxDepth }
+      ];
 
-        const y = d3.scaleLinear()
-          .domain([0, d3.max(data, d => d.count)])
-          .nice()
-          .range([height - margin.bottom, margin.top]);
+      svg.selectAll('.depth-band')
+        .data(depthBands)
+        .enter()
+        .append('rect')
+        .attr('class', 'depth-band')
+        .attr('x', d => x(d.x0))
+        .attr('y', margin.top)
+        .attr('width', d => x(d.x1) - x(d.x0))
+        .attr('height', height - margin.bottom - margin.top)
+        .attr('fill', (d, i) =>
+          i === 0 ? 'rgba(163,255,205,0.06)' :
+          i === 1 ? 'rgba(122,162,255,0.05)' :
+                    'rgba(255,107,107,0.05)'
+        );
 
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(0,${height - margin.bottom})`)
-          .call(d3.axisBottom(x));
+      // Axes
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x));
 
-        svg.append('g')
-          .attr('class', 'axis')
-          .attr('transform', `translate(${margin.left},0)`)
-          .call(d3.axisLeft(y));
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
 
-        svg.append('text')
-          .attr('transform', 'rotate(-90)')
-          .attr('x', -(height / 2))
-          .attr('y', 20)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '12px')
-          .style('text-anchor', 'middle')
-          .text('Number of Earthquakes');
+      // X-axis label with km/mi note
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Depth (km; 1 km ≈ 0.62 mi)');
 
-        svg.selectAll('rect')
-          .data(data)
-          .join('rect')
-          .attr('x', d => x(d.label))
-          .attr('y', height - margin.bottom)
-          .attr('width', x.bandwidth())
-          .attr('height', 0)
-          .attr('fill', d => d.color)
-          .on('mouseover', (event, d) => {
-            showTooltip(event, {
-              title: d.label.replace('\n', ' '),
-              detail: `${d.count.toLocaleString()} earthquakes`
-            });
-          })
-          .on('mouseout', hideTooltip)
-          .transition()
-          .duration(800)
-          .attr('y', d => y(d.count))
-          .attr('height', d => height - margin.bottom - y(d.count));
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Magnitude');
 
-        // Add count labels on bars
-        svg.selectAll('.count-label')
-          .data(data)
-          .join('text')
-          .attr('class', 'count-label')
-          .attr('x', d => x(d.label) + x.bandwidth() / 2)
-          .attr('y', d => y(d.count) - 10)
-          .attr('fill', 'var(--ink)')
-          .attr('font-size', '16px')
-          .attr('font-weight', '600')
-          .style('text-anchor', 'middle')
-          .text(d => d.count.toLocaleString())
-          .attr('opacity', 0)
-          .transition()
-          .delay(800)
-          .duration(400)
-          .attr('opacity', 1);
+      function depthColor(d) {
+        if (d.depth < 5) return 'rgba(163,255,205,0.9)';  // shallow
+        if (d.depth < 15) return 'var(--accent)';         // mid-crust
+        return 'rgba(255,107,107,0.9)';                   // deeper
       }
 
-      d3.selectAll('#section-comparison .control-btn').on('click', function() {
-        d3.selectAll('#section-comparison .control-btn').classed('active', false);
-        d3.select(this).classed('active', true);
-        const period = this.dataset.period;
-        updateComparison(period);
-      });
+      const rScale = d3.scaleLinear()
+        .domain([magExtent[0], magExtent[1]])
+        .range([1.5, 8]);
 
-      updateComparison('all');
+      const dots = svg.append('g')
+        .selectAll('circle')
+        .data(data)
+        .enter()
+        .append('circle')
+        .attr('cx', d => x(d.depth))
+        .attr('cy', d => y(d.mag))
+        .attr('r', d => rScale(d.mag))
+        .attr('fill', d => d === mainshock ? 'var(--danger)' : depthColor(d))
+        .attr('stroke', d => d === mainshock ? 'white' : 'none')
+        .attr('stroke-width', d => d === mainshock ? 2 : 0)
+        .attr('opacity', d => d === mainshock ? 1 : 0.75)
+        .on('mouseover', (event, d) => {
+          showTooltip(event, {
+            title: `M ${d.mag.toFixed(1)} at ${d.depth.toFixed(1)} km`,
+            detail: `${d.place}<br>${d.time.toLocaleDateString()}`
+          });
+        })
+        .on('mouseout', hideTooltip);
+
+      dots.filter(d => d === mainshock).raise();
+
+      // Average depth line
+      svg.append('line')
+        .attr('x1', x(meanDepth))
+        .attr('x2', x(meanDepth))
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', 'var(--accent2)')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '4,4');
+
+      svg.append('text')
+        .attr('x', x(meanDepth))
+        .attr('y', margin.top - 10)
+        .attr('fill', 'var(--accent2)')
+        .attr('font-size', '11px')
+        .attr('font-weight', '500')
+        .style('text-anchor', meanDepth > maxDepth / 2 ? 'end' : 'start')
+        .text(`Avg depth ≈ ${meanDepth.toFixed(1)} km (${meanDepthMi.toFixed(1)} mi)`);
+
+      // Mainshock label – moved slightly left & below the marker
+      const mainLabelX = x(mainshock.depth) - 10;
+      const mainLabelY = y(mainshock.mag) + 4;
+
+      const mainLabel = svg.append('text')
+        .attr('x', mainLabelX)
+        .attr('y', mainLabelY)
+        .attr('fill', 'var(--danger)')
+        .attr('font-size', '11px')
+        .attr('font-weight', '600')
+        .style('text-anchor', 'end');
+
+      mainLabel.append('tspan')
+        .text('M6.9 mainshock');
+
+      mainLabel.append('tspan')
+        .attr('x', mainLabelX)
+        .attr('dy', '1.2em')
+        .text(`${mainshock.depth.toFixed(1)} km (${mainshockDepthMi.toFixed(1)} mi)`);
+
+      // Depth legend with short km + mi labels (two lines)
+      const legend = svg.append('g')
+        .attr('transform', `translate(${width - margin.right - 135}, ${margin.top})`);
+
+      const legendItems = [
+        { color: 'rgba(163,255,205,0.9)', km: 'Shallow',   mi: '(0–5km / 0–3mi)' },
+        { color: 'var(--accent)',         km: 'Mid',  mi: '(5–15km / 3–9mi)' },
+        { color: 'rgba(255,107,107,0.9)', km: 'Deep',   mi: '(> 15km / 9mi)' }
+      ];
+
+      const rows = legend.selectAll('g.legend-row')
+        .data(legendItems)
+        .enter()
+        .append('g')
+        .attr('class', 'legend-row')
+        .attr('transform', (d, i) => `translate(0, ${i * 26})`);
+
+      rows.append('rect')
+        .attr('x', 0)
+        .attr('y', 2)
+        .attr('width', 14)
+        .attr('height', 14)
+        .attr('rx', 3)
+        .attr('ry', 3)
+        .attr('fill', d => d.color);
+
+      const legendText = rows.append('text')
+        .attr('x', 20)
+        .attr('y', 12)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '11px');
+
+      legendText.append('tspan')
+        .text(d => d.km);
+
+      legendText.append('tspan')
+        .attr('x', 20)
+        .attr('dy', '1.2em')
+        .attr('font-size', '10px')
+        .text(d => d.mi);
+
       document.getElementById('loading-comparison').style.display = 'none';
       container.style('display', 'block');
     }
@@ -1547,6 +1644,11 @@
       const width = 800;
       const height = 400;
       const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+
+      const LABEL_GUTTER = 80;
+      const plotRight   = width - margin.right - LABEL_GUTTER;
+      const plotWidth   = plotRight - margin.left;
+
 
       const svg = container.append('svg')
         .attr('width', width)
