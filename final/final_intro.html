@@ -633,36 +633,6 @@
     </div>
   </section>
 
-  <!-- Section 5: Depth Analysis -->
-  <section class="section" id="section-depth">
-    <div class="content-wrapper">
-      <div class="section-header">
-        <div class="section-number">05 — Subsurface</div>
-        <h2>Deep Underground:<br>Depth Patterns</h2>
-        <p class="section-description">
-          Earthquakes don't just vary in location — they occur at different depths.<br>
-          This reveals information about fault structure and crustal stress.
-        </p>
-      </div>
-
-      <div class="viz-container">
-        <div class="loading" id="loading-depth">
-          <div class="spinner"></div>
-          <p>Loading depth data...</p>
-        </div>
-        <div id="depth-viz" style="display:none;"></div>
-      </div>
-
-      <div class="stat-highlight">
-        Among earthquakes with reliable depth estimates, about
-        <strong>half</strong> occurred shallower than <strong>5 km</strong>, and another
-        <strong>46%</strong> between <strong>5–15 km</strong>. Only around
-        <strong>3%</strong> reached depths greater than <strong>15 km</strong> — a band that
-        includes the <strong>17.2 km</strong> M6.9 mainshock at the base of this sequence.
-      </div>
-    </div>
-  </section>
-
   <!-- Section 6: Cumulative Energy -->
   <section class="section" id="section-energy">
     <div class="content-wrapper">
@@ -825,7 +795,6 @@
       initMagnitudeViz();
       initComparison();
       initSpatial();
-      initDepth();
       initEnergy();
     });
 
@@ -1795,163 +1764,6 @@
       updateLayer('all');
 
       document.getElementById('loading-spatial').style.display = 'none';
-      container.style('display', 'block');
-    }
-
-    // 5. Depth Distribution
-    function initDepth() {
-      const container = d3.select('#depth-viz');
-      const width = 800;
-      const height = 400;
-      const margin = { top: 40, right: 40, bottom: 60, left: 70 };
-
-      const svg = container.append('svg')
-        .attr('width', width)
-        .attr('height', height)
-        .attr('viewBox', `0 0 ${width} ${height}`)
-        .attr('style', 'max-width: 100%; height: auto;');
-
-      // Use only non-negative depths for a clean crustal picture
-      const depthData = earthquakeData.filter(d => !isNaN(d.depth) && d.depth >= 0);
-
-      const depthBands = [
-        { id: 'shallow', label: '0–5 km',   desc: 'Shallow (upper crust)',  min: 0,  max: 5,  color: 'rgba(163,255,205,0.9)' },
-        { id: 'mid',     label: '5–15 km',  desc: 'Mid-crust',             min: 5,  max: 15, color: 'var(--accent)' },
-        { id: 'deep',    label: '>15 km',   desc: 'Deeper',                min: 15, max: 80, color: 'rgba(255,107,107,0.9)' }
-      ];
-
-      const total = depthData.length;
-
-      depthBands.forEach(b => {
-        const inBand = depthData.filter(d => d.depth >= b.min && d.depth < b.max);
-        b.count = inBand.length;
-        b.pct   = (b.count / total) * 100;
-      });
-
-      // Find mainshock depth and which band it falls into
-      const mainshock = earthquakeData.reduce(
-        (a, b) => (b.mag > a.mag ? b : a),
-        earthquakeData[0]
-      );
-      const mainshockDepth = mainshock.depth;
-      const mainBand = depthBands.find(b => mainshockDepth >= b.min && mainshockDepth < b.max);
-
-      const x = d3.scaleBand()
-        .domain(depthBands.map(b => b.label))
-        .range([margin.left, width - margin.right])
-        .padding(0.35);
-
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(depthBands, b => b.count)])
-        .nice()
-        .range([height - margin.bottom, margin.top]);
-
-      // Axes
-      svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
-
-      svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y));
-
-      svg.append('text')
-        .attr('x', width / 2)
-        .attr('y', height - 10)
-        .attr('fill', 'var(--muted)')
-        .attr('font-size', '12px')
-        .style('text-anchor', 'middle')
-        .text('Depth band (km)');
-
-      svg.append('text')
-        .attr('transform', 'rotate(-90)')
-        .attr('x', -(height / 2))
-        .attr('y', 18)
-        .attr('fill', 'var(--muted)')
-        .attr('font-size', '12px')
-        .style('text-anchor', 'middle')
-        .text('Number of earthquakes');
-
-      // Bars
-      svg.selectAll('.depth-bar')
-        .data(depthBands)
-        .join('rect')
-        .attr('class', 'depth-bar')
-        .attr('x', d => x(d.label))
-        .attr('y', height - margin.bottom)
-        .attr('width', x.bandwidth())
-        .attr('height', 0)
-        .attr('fill', d => d.color)
-        .on('mouseover', (event, d) => {
-          showTooltip(event, {
-            title: `${d.count.toLocaleString()} earthquakes`,
-            detail: `${d.desc}<br>${d.label} (${d.pct.toFixed(1)}% of events)`
-          });
-        })
-        .on('mouseout', hideTooltip)
-        .transition()
-        .duration(800)
-        .delay((d, i) => i * 200)
-        .attr('y', d => y(d.count))
-        .attr('height', d => height - margin.bottom - y(d.count));
-
-      // Counts above each bar
-      svg.selectAll('.depth-label-count')
-        .data(depthBands)
-        .join('text')
-        .attr('class', 'depth-label-count')
-        .attr('x', d => x(d.label) + x.bandwidth() / 2)
-        .attr('y', d => y(d.count) - 8)
-        .attr('fill', 'var(--ink)')
-        .attr('font-size', '12px')
-        .attr('font-weight', '600')
-        .style('text-anchor', 'middle')
-        .text(d => d.count.toLocaleString());
-
-      // Percentages just below the counts (still above the bar)
-      svg.selectAll('.depth-label-pct')
-        .data(depthBands)
-        .join('text')
-        .attr('class', 'depth-label-pct')
-        .attr('x', d => x(d.label) + x.bandwidth() / 2)
-        .attr('y', d => y(d.count) + 8)
-        .attr('fill', 'var(--muted)')
-        .attr('font-size', '11px')
-        .style('text-anchor', 'middle')
-        .text(d => `${d.pct.toFixed(1)}%`);
-
-      // Mainshock marker on its depth band
-      if (mainBand) {
-        const mx = x(mainBand.label) + x.bandwidth() / 2;
-        const my = y(mainBand.count) - 40;
-
-        svg.append('circle')
-          .attr('cx', mx)
-          .attr('cy', my)
-          .attr('r', 7)
-          .attr('fill', 'var(--danger)')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 2);
-
-        const label = svg.append('text')
-          .attr('x', mx + 10)
-          .attr('y', my - 4)
-          .attr('fill', 'var(--danger)')
-          .attr('font-size', '11px')
-          .attr('font-weight', '600');
-
-        label.append('tspan')
-          .text('M6.9 mainshock');
-
-        label.append('tspan')
-          .attr('x', mx + 10)
-          .attr('dy', '1.2em')
-          .text(`${mainshockDepth.toFixed(1)} km`);
-      }
-
-      document.getElementById('loading-depth').style.display = 'none';
       container.style('display', 'block');
     }
 
