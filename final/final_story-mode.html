@@ -8,6 +8,7 @@
   <!-- D3.js and TopoJSON -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script src="media_tracks.js"></script>
 
   <!-- Fraunces for headings / “museum” labels -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1107,6 +1108,12 @@
     </div>
   </div>
 
+   <!-- External media tracks -->
+  <script src="media_tracks.js">
+
+  </script>
+
+  <!-- Main story-mode logic -->
   <script>
     // --- DOM + D3 setup ---
     const mapPanel = document.getElementById("map-panel");
@@ -1390,74 +1397,36 @@
           }
         };
 
-        // Simple media-track data – keyed to day indices for the windowed timeline
-        const MEDIA_TRACKS = [
-          {
-            id: "broadcast-overview",
-            label: "Live broadcast & overview",
-            items: [
-              {
-                id: "world-series-broadcast",
-                dayIndex: mainshockIndex,
-                stageId: "mainshock",
-                stageLabel: "Main shock",
-                title: "World Series broadcast interrupted",
-                caption: "National Archives / FEMA footage of ABC’s live World Series pre-game when the quake struck at 5:04 PM PDT.",
-                href: "https://archive.org/details/gov.archives.arc.951729"
-              },
-              {
-                id: "usgs-index-map",
-                dayIndex: rebuildingStart,
-                stageId: "rebuilding",
-                stageLabel: "Rebuilding",
-                title: "USGS damage photo index",
-                caption: "USGS DDS-29 index map showing documented damage photo locations across the Bay Area.",
-                href: "https://pubs.usgs.gov/dds/dds-29/screens/001sr.jpeg"
-              }
-            ]
-          },
-          {
-            id: "infrastructure-damage",
-            label: "Freeways & bridges",
-            items: [
-              {
-                id: "cypress-viaduct-collapse",
-                dayIndex: mainshockIndex,
-                stageId: "mainshock",
-                stageLabel: "Main shock",
-                title: "Cypress Viaduct collapse, Oakland",
-                caption: "Aerial USGS view of the collapsed double-deck I-880 Cypress Street Viaduct where many fatalities occurred.",
-                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/LomaPrieta1989img0019Cypress.jpg"
-              }
-            ]
-          },
-          {
-            id: "marina-district",
-            label: "Marina District damage",
-            items: [
-              {
-                id: "marina-building-collapse",
-                dayIndex: mainshockIndex,
-                stageId: "mainshock",
-                stageLabel: "Main shock",
-                title: "Marina District building collapse",
-                caption: "USGS image of a collapsed Marina District apartment building resting on a crushed car on filled ground.",
-                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/SFLomaPrietaMarinaDistrict.jpg"
-              },
-              {
-                id: "marina-fire",
-                dayIndex: mainshockIndex + 1,
-                stageId: "aftershocks",
-                stageLabel: "Aftershocks",
-                title: "Marina District fire & gas-fed blaze",
-                caption: "USGS photo of fire and collapsed buildings at Beach and Divisadero after gas lines ignited.",
-                href: "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/LomaPrietaSFDivisideroCollapseMeyer.jpg"
-              }
-            ]
-          }
-        ];
+        // Resolve media tracks from external data (media_tracks.js).
+        // Items can either provide an explicit `dayIndex`, or an `anchor`
+        // like "start", "mainshock", "aftershockStart", "rebuildingStart"
+        // plus an optional `offsetDays` that we convert to a day index here.
+        const anchorToDayIndex = {
+          start: 0,
+          mainshock: mainshockIndex,
+          aftershockStart: aftershockStartIndex,
+          rebuildingStart: rebuildingStart,
+          end: totalDays
+        };
 
-
+        const MEDIA_TRACKS = (window.MEDIA_TRACKS_DATA || []).map(track => ({
+          ...track,
+          items: (track.items || []).map(item => {
+            const base =
+              anchorToDayIndex[item.anchor] ??
+              (typeof item.dayIndex === "number" ? item.dayIndex : 0);
+            const offset = item.offsetDays || 0;
+            const idx = Math.max(
+              0,
+              Math.min(totalDays, Math.round(base + offset))
+            );
+            return {
+              ...item,
+              dayIndex: idx
+            };
+          })
+        }));
+          
         function stageForTime(t) {
           if (t < mainshockDate) return "foreshocks";
           if (t < aftershockStartDate) return "mainshock";
