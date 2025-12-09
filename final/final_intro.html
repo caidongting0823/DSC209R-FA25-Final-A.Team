@@ -440,9 +440,13 @@
         <div id="timeline-viz" style="display:none;"></div>
       </div>
 
-      <div class="stat-highlight">
-        In the <strong>year after</strong> the mainshock, more than <strong>15,000 earthquakes</strong> were recorded — about <strong>1.7×</strong> as many as in the year before, and over <strong>half</strong> of all events in this two-year window.
-      </div>
+        <div class="stat-highlight">
+          In this two-year window, an average day <strong>before</strong> the mainshock saw about
+          <strong>27 earthquakes</strong>. After October 17, that daily rate jumps to nearly
+          <strong>60 earthquakes per day</strong>—more than <strong>twice</strong> as many—and stays
+          elevated for months, driven first by an intense burst of aftershocks and then by a
+          long tail of ongoing activity.
+        </div>
     </div>
   </section>
 
@@ -731,6 +735,7 @@
       tooltip.classed('visible', false);
     }
 
+
     // 1. Timeline Visualization
     function initTimeline() {
       const container = d3.select('#timeline-viz');
@@ -738,13 +743,64 @@
       const height = 400;
       const margin = { top: 40, right: 40, bottom: 60, left: 60 };
 
+      // Root SVG
       const svg = container.append('svg')
         .attr('width', width)
         .attr('height', height)
         .attr('viewBox', `0 0 ${width} ${height}`)
         .attr('style', 'max-width: 100%; height: auto;');
 
-      // Aggregate by day
+      // Controls row under the chart (button + legend)
+      const controls = container.append('div')
+        .attr('class', 'viz-toggle-controls')
+        .style('margin-top', '16px')
+        .style('display', 'flex')
+        .style('justify-content', 'center')
+        .style('align-items', 'center')
+        .style('gap', '16px')
+        .style('flex-wrap', 'wrap');
+
+      const toggleButton = controls.append('button')
+        .attr('class', 'viz-toggle-btn')
+        .style('font-size', '0.9rem')
+        .style('padding', '10px 22px')
+        .style('border-radius', '999px')
+        .style('border', '1px solid rgba(148,163,255,0.9)')
+        .style('background', 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9))')
+        .style('color', 'var(--ink)')
+        .style('cursor', 'pointer')
+        .style('font-weight', '500')
+        .style('box-shadow', '0 8px 24px rgba(15,23,42,0.8)');
+
+      // HTML legend to the *right* of the button
+      const legendHTML = controls.append('div')
+        .attr('class', 'timeline-legend')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('gap', '14px')
+        .style('font-size', '0.8rem')
+        .style('color', 'var(--muted)');
+
+      function addLegendItem(label, color, widthPx) {
+        const item = legendHTML.append('div')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('gap', '6px');
+
+        item.append('span')
+          .style('display', 'inline-block')
+          .style('width', (widthPx || 22) + 'px')
+          .style('height', '2px')
+          .style('border-radius', '999px')
+          .style('background', color);
+
+        item.append('span').text(label);
+      }
+
+      addLegendItem('Daily count', 'rgba(122,162,255,0.35)');
+      addLegendItem('7-day average', 'var(--accent)');
+
+      // ---------- Data prep ----------
       const dayFormat = d3.timeDay;
       const dailyCounts = d3.rollup(
         earthquakeData,
@@ -755,74 +811,269 @@
       const timelineData = Array.from(dailyCounts, ([date, count]) => ({ date, count }))
         .sort((a, b) => a.date - b.date);
 
-      const x = d3.scaleTime()
-        .domain(d3.extent(timelineData, d => d.date))
-        .range([margin.left, width - margin.right]);
-
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(timelineData, d => d.count)])
-        .nice()
-        .range([height - margin.bottom, margin.top]);
-
-      // Grid
-      svg.append('g')
-        .attr('class', 'grid')
-        .attr('transform', `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).tickSize(-(height - margin.top - margin.bottom)).tickFormat(''));
-
-      // Axes
-      svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).ticks(10));
-
-      svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y));
-
-      // Y-axis label
-      svg.append('text')
-        .attr('transform', 'rotate(-90)')
-        .attr('x', -(height / 2))
-        .attr('y', 15)
-        .attr('fill', 'var(--muted)')
-        .attr('font-size', '12px')
-        .style('text-anchor', 'middle')
-        .text('Earthquakes per Day');
-
-      // Line
-      const line = d3.line()
-        .x(d => x(d.date))
-        .y(d => y(d.count))
-        .curve(d3.curveMonotoneX);
-
-      svg.append('path')
-        .datum(timelineData)
-        .attr('fill', 'none')
-        .attr('stroke', 'var(--accent)')
-        .attr('stroke-width', 2)
-        .attr('d', line);
-
-      // Mainshock marker
       const mainshockDate = dayFormat(MAINSHOCK_TIME);
-      svg.append('line')
-        .attr('x1', x(mainshockDate))
-        .attr('x2', x(mainshockDate))
-        .attr('y1', margin.top)
-        .attr('y2', height - margin.bottom)
-        .attr('stroke', 'var(--danger)')
-        .attr('stroke-width', 2)
-        .attr('stroke-dasharray', '4,4');
+      const startDate = timelineData[0].date;
+      const endDate   = timelineData[timelineData.length - 1].date;
 
-      svg.append('text')
-        .attr('x', x(mainshockDate))
-        .attr('y', margin.top - 10)
-        .attr('fill', 'var(--danger)')
-        .attr('font-size', '12px')
-        .attr('font-weight', '600')
-        .style('text-anchor', 'middle')
-        .text('Oct 17, 1989');
+      // Average daily counts before vs. after mainshock
+      const beforePeriod = timelineData.filter(d => d.date < mainshockDate);
+      const afterPeriod  = timelineData.filter(d => d.date >= mainshockDate);
+
+      const meanBefore = d3.mean(beforePeriod, d => d.count) || 0;
+      const meanAfter  = d3.mean(afterPeriod,  d => d.count) || 0;
+
+      // Peak day (for y-scale)
+      const peak = timelineData.reduce(
+        (a, b) => (b.count > a.count ? b : a),
+        timelineData[0]
+      );
+      const maxDaily = peak.count;
+
+      // 7-day rolling average
+      const windowSize = 7;
+      const rollingData = timelineData.map((d, i, arr) => {
+        const start = Math.max(0, i - windowSize + 1);
+        const subset = arr.slice(start, i + 1);
+        return {
+          date: d.date,
+          avg: d3.mean(subset, s => s.count)
+        };
+      });
+
+      // Monthly aggregates for interaction
+      const monthFormat = d3.timeMonth;
+      const monthlyData = Array.from(
+        d3.rollup(
+          timelineData,
+          v => {
+            const total = d3.sum(v, d => d.count);
+            const days = v.length;
+            return { total, days, avg: total / days };
+          },
+          d => monthFormat(d.date)
+        ),
+        ([date, stats]) => ({ date, ...stats })
+      ).sort((a, b) => a.date - b.date);
+
+      // ---------- Rendering with zoom toggle ----------
+      const zoomMax = 200;   // zoomed-in y max
+      let zoomed = false;    // DEFAULT: full spike view
+
+      function setButtonLabel() {
+        toggleButton.text(
+          zoomed
+            ? 'View Full Spike'
+            : 'Zoom in for Detail'
+        );
+      }
+
+      function render() {
+        svg.selectAll('*').remove();
+
+        const yMax = zoomed ? zoomMax : maxDaily;
+        const y = d3.scaleLinear()
+          .domain([0, yMax])
+          .nice()
+          .range([height - margin.bottom, margin.top]);
+
+        const x = d3.scaleTime()
+          .domain(d3.extent(timelineData, d => d.date))
+          .range([margin.left, width - margin.right]);
+
+        // Grid
+        svg.append('g')
+          .attr('class', 'grid')
+          .attr('transform', `translate(0,${height - margin.bottom})`)
+          .call(d3.axisBottom(x)
+            .tickSize(-(height - margin.top - margin.bottom))
+            .tickFormat(''));
+
+        // Axes
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(0,${height - margin.bottom})`)
+          .call(d3.axisBottom(x).ticks(10));
+
+        svg.append('g')
+          .attr('class', 'axis')
+          .attr('transform', `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y));
+
+        // Y-axis label
+        svg.append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -(height / 2))
+          .attr('y', 15)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
+          .style('text-anchor', 'middle')
+          .text('Earthquakes per Day');
+
+        // Shading under averages
+        const beforeY = y(Math.min(meanBefore, yMax));
+        const afterY  = y(Math.min(meanAfter,  yMax));
+
+        svg.append('rect')
+          .attr('x', x(startDate))
+          .attr('y', beforeY)
+          .attr('width', x(mainshockDate) - x(startDate))
+          .attr('height', height - margin.bottom - beforeY)
+          .attr('fill', 'var(--accent)')
+          .attr('opacity', 0.12);
+
+        svg.append('rect')
+          .attr('x', x(mainshockDate))
+          .attr('y', afterY)
+          .attr('width', x(endDate) - x(mainshockDate))
+          .attr('height', height - margin.bottom - afterY)
+          .attr('fill', 'var(--accent2)')
+          .attr('opacity', 0.12);
+
+        // Avg labels centered within each section
+        const avgLabelY = margin.top + 14;
+        const beforeMidX = (x(startDate) + x(mainshockDate)) / 2;
+        const afterMidX  = (x(mainshockDate) + x(endDate)) / 2;
+
+        svg.append('text')
+          .attr('x', beforeMidX)
+          .attr('y', avgLabelY)
+          .attr('fill', 'var(--accent2)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '500')
+          .style('text-anchor', 'middle')
+          .text(`Avg/day before mainshock ≈ ${meanBefore.toFixed(1)}`);
+
+        svg.append('text')
+          .attr('x', afterMidX)
+          .attr('y', avgLabelY)
+          .attr('fill', 'var(--accent2)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '500')
+          .style('text-anchor', 'middle')
+          .text(`Avg/day after mainshock ≈ ${meanAfter.toFixed(1)}`);
+
+        // Lines
+        const clampValues = zoomed; // clamp only in zoomed view
+        const dailyLine = d3.line()
+          .x(d => x(d.date))
+          .y(d => y(clampValues ? Math.min(d.count, yMax) : d.count))
+          .curve(d3.curveMonotoneX);
+
+        svg.append('path')
+          .datum(timelineData)
+          .attr('fill', 'none')
+          .attr('stroke', 'rgba(122,162,255,0.35)')
+          .attr('stroke-width', 1.5)
+          .attr('d', dailyLine);
+
+        const avgLine = d3.line()
+          .x(d => x(d.date))
+          .y(d => y(clampValues ? Math.min(d.avg, yMax) : d.avg))
+          .curve(d3.curveMonotoneX);
+
+        svg.append('path')
+          .datum(rollingData)
+          .attr('fill', 'none')
+          .attr('stroke', 'var(--accent)')
+          .attr('stroke-width', 2.5)
+          .attr('d', avgLine);
+
+        // Horizontal average lines
+        svg.append('line')
+          .attr('x1', x(startDate))
+          .attr('x2', x(mainshockDate))
+          .attr('y1', beforeY)
+          .attr('y2', beforeY)
+          .attr('stroke', 'var(--accent)')
+          .attr('stroke-width', 1.5)
+          .attr('stroke-dasharray', '4,4')
+          .attr('opacity', 0.9);
+
+        svg.append('line')
+          .attr('x1', x(mainshockDate))
+          .attr('x2', x(endDate))
+          .attr('y1', afterY)
+          .attr('y2', afterY)
+          .attr('stroke', 'var(--accent2)')
+          .attr('stroke-width', 1.5)
+          .attr('stroke-dasharray', '4,4')
+          .attr('opacity', 0.9);
+
+        // === Interactive monthly bands (hover for monthly totals) ===
+        const monthOverlay = svg.append('g').attr('class', 'month-overlay');
+
+        monthOverlay.selectAll('rect')
+          .data(monthlyData)
+          .join('rect')
+          .attr('x', (d, i) => {
+            const x0 = x(d.date);
+            const x1 = i < monthlyData.length - 1
+              ? x(monthlyData[i + 1].date)
+              : (width - margin.right);
+            return x0;
+          })
+          .attr('y', margin.top)
+          .attr('width', (d, i) => {
+            const x0 = x(d.date);
+            const x1 = i < monthlyData.length - 1
+              ? x(monthlyData[i + 1].date)
+              : (width - margin.right);
+            return Math.max(0, x1 - x0);
+          })
+          .attr('height', height - margin.bottom - margin.top)
+          .attr('fill', 'transparent')
+          .on('mouseover', function (event, d) {
+            d3.select(this).attr('fill', 'rgba(122,162,255,0.10)');
+            const monthLabel = d.date.toLocaleString('default', {
+              month: 'short',
+              year: 'numeric'
+            });
+            showTooltip(event, {
+              title: monthLabel,
+              detail: `Total: ${d.total.toLocaleString()} earthquakes<br>` +
+                      `Avg per day: ${d.avg.toFixed(1)}`
+            });
+          })
+          .on('mousemove', function (event) {
+            d3.select('#tooltip')
+              .style('left', (event.pageX + 15) + 'px')
+              .style('top', (event.pageY - 15) + 'px');
+          })
+          .on('mouseout', function () {
+            d3.select(this).attr('fill', 'transparent');
+            hideTooltip();
+          });
+
+        // Mainshock marker on top of monthly overlays
+        svg.append('line')
+          .attr('x1', x(mainshockDate))
+          .attr('x2', x(mainshockDate))
+          .attr('y1', margin.top)
+          .attr('y2', height - margin.bottom)
+          .attr('stroke', 'var(--danger)')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', '4,4');
+
+        svg.append('text')
+          .attr('x', x(mainshockDate))
+          .attr('y', margin.top - 10)
+          .attr('fill', 'var(--danger)')
+          .attr('font-size', '12px')
+          .attr('font-weight', '600')
+          .style('text-anchor', 'middle')
+          .text('Oct 17, 1989');
+      }
+
+      // Initial render (DEFAULT = full spike)
+      setButtonLabel();
+      render();
+
+      // Toggle handler
+      toggleButton.on('click', () => {
+        zoomed = !zoomed;
+        setButtonLabel();
+        render();
+      });
 
       document.getElementById('loading-timeline').style.display = 'none';
       container.style('display', 'block');
