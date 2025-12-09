@@ -21,7 +21,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/videoplayback-2021-02-08-t-170217.759/videoplayback%20-%202021-02-08T170217.759.mp4",
         source:
-          "Source: ABC World Series Game 3 broadcast, via Revelation Video on Internet Archive."
+          "ABC World Series Game 3 broadcast, via Revelation Video on Internet Archive."
       },
       {
         id: "kgo-live-coverage",
@@ -35,7 +35,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/1989BayAreaEarthquake/videoplayback.mp4",
         source:
-          "Source: KGO-TV/ABC San Francisco, six-hour live earthquake special, via Internet Archive."
+          "KGO-TV/ABC San Francisco, six-hour live earthquake special, via Internet Archive."
       },
       {
         id: "fema-documentary",
@@ -49,7 +49,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/gov.archives.arc.951729/gov.archives.arc.951729_512kb.mp4",
         source:
-          "Source: FEMA National Emergency Training Center and U.S. National Archives (ARC 951729), Public Domain."
+          "FEMA National Emergency Training Center and U.S. National Archives (ARC 951729), Public Domain."
       },
       {
         id: "usgs-index-map",
@@ -62,7 +62,7 @@ window.MEDIA_TRACKS_DATA = [
           "USGS DDS-29 index map locating all 103 documented damage-photo sites from San Francisco through the Monterey Bay region.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/001sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, Digital Data Series DDS-29 (Image 001), Public Domain."
+          "U.S. Geological Survey, Digital Data Series DDS-29 (Image 001), Public Domain."
       }
     ]
   },
@@ -83,7 +83,7 @@ window.MEDIA_TRACKS_DATA = [
           "USGS photo of the collapsed double-deck I-880 Cypress Structure in Oakland, where 42 people died when the upper deck pancaked onto the lower deck.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/017sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 017), photo by H.G. Wilshire, Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 017), photo by H.G. Wilshire, Public Domain."
       },
       {
         id: "bay-bridge-span-failure",
@@ -96,7 +96,7 @@ window.MEDIA_TRACKS_DATA = [
           "San Francisco–Oakland Bay Bridge with a 50-foot upper deck section collapsed onto the lower deck, killing one driver and closing the bridge for a month.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/014sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 014), Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 014), Public Domain."
       },
       {
         id: "freeway-infrastructure-damage",
@@ -110,7 +110,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://upload.wikimedia.org/wikipedia/commons/4/4a/EarthquakeFreewayCa1989.jpg",
         source:
-          "Source: Government freeway damage photograph, via Wikimedia Commons."
+          "Government freeway damage photograph, via Wikimedia Commons."
       }
     ]
   },
@@ -132,7 +132,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/1989.Loma.Prieta.Earthquake.Marina.District/1989.Loma.Prieta.Earthquake.Marina.District_512kb.mp4",
         source:
-          "Source: Michael Joseph Woody, Marina District footage, via Internet Archive."
+          "Michael Joseph Woody, Marina District footage, via Internet Archive."
       },
       {
         id: "marina-liquefaction-damage",
@@ -146,7 +146,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://upload.wikimedia.org/wikipedia/commons/3/35/Typical_liquefaction_damage_in_the_Marina_District_of_San_Francisco_1989.jpg",
         source:
-          "Source: U.S. Geological Survey, “Typical liquefaction damage in the Marina District of San Francisco, 1989”, Public Domain."
+          "U.S. Geological Survey, “Typical liquefaction damage in the Marina District of San Francisco, 1989”, Public Domain."
       },
       {
         id: "marina-beach-divisadero",
@@ -160,7 +160,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://upload.wikimedia.org/wikipedia/commons/d/d5/Damage_to_apartment_building_at_Beach_and_Divisadero_Streets_from_the_1989_Loma_Prieta_Earthquake.jpg",
         source:
-          "Source: U.S. Geological Survey, Beach and Divisadero damage photo, Public Domain."
+          "U.S. Geological Survey, Beach and Divisadero damage photo, Public Domain."
       },
       {
         id: "marina-spectators",
@@ -174,7 +174,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://upload.wikimedia.org/wikipedia/commons/7/75/Spectators_observe_damage_in_San_Francisco%27s_Marina_District_a_day_after_the_Loma_Prieta_Earthquake.jpg",
         source:
-          "Source: U.S. Geological Survey, Marina District spectators photo, Public Domain."
+          "U.S. Geological Survey, Marina District spectators photo, Public Domain."
       },
       {
         id: "marina-fire-dds29",
@@ -187,7 +187,7 @@ window.MEDIA_TRACKS_DATA = [
           "USGS image of collapsed buildings and fire response at Beach and Divisadero, one of the defining photos of Marina District damage.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/002sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 002), photo by J.K. Nakata, Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 002), photo by J.K. Nakata, Public Domain."
       }
     ]
   },
@@ -209,7 +209,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/youtube-1GV5BsCt0ZQ/1GV5BsCt0ZQ.mp4",
         source:
-          "Source: CBS 8 San Diego archival news report, via Internet Archive."
+          "CBS 8 San Diego archival news report, via Internet Archive."
       },
       {
         id: "pacific-garden-mall",
@@ -222,7 +222,7 @@ window.MEDIA_TRACKS_DATA = [
           "USGS photograph of ruined unreinforced masonry buildings in Santa Cruz’s Pacific Garden Mall, where several people were killed.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/084sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 084), photo by C.E. Meyer, Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 084), photo by C.E. Meyer, Public Domain."
       },
       {
         id: "summit-road-damage",
@@ -235,7 +235,7 @@ window.MEDIA_TRACKS_DATA = [
           "Damage along Summit Road in the Santa Cruz Mountains, one of the closest documented locations to the Loma Prieta epicenter.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/062sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 062), Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 062), Public Domain."
       },
       {
         id: "moss-landing-liquefaction",
@@ -248,7 +248,7 @@ window.MEDIA_TRACKS_DATA = [
           "Severe liquefaction at Moss Landing, with ground cracks and damaged structures in saturated coastal sands.",
         href: "https://pubs.usgs.gov/dds/dds-29/screens/098sr.jpeg",
         source:
-          "Source: U.S. Geological Survey, DDS-29 (Image 098), Public Domain."
+          "U.S. Geological Survey, DDS-29 (Image 098), Public Domain."
       },
       {
         id: "highway-landslide",
@@ -262,7 +262,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://upload.wikimedia.org/wikipedia/commons/f/f8/USGS_-_1989_Loma_Prieta_earthquake_-_Landslide_Debris_on_Highway.jpg",
         source:
-          "Source: U.S. Geological Survey, “Landslide debris on highway” photo, Public Domain."
+          "U.S. Geological Survey, “Landslide debris on highway” photo, Public Domain."
       }
     ]
   },
@@ -283,7 +283,7 @@ window.MEDIA_TRACKS_DATA = [
           "CBS radio announcer Jack Buck describes the scene at Candlestick Park seconds after the shaking stops, with over 60,000 fans in the stadium.",
         href: "https://archive.org/download/LomaPrietaQuake_551/buckloma.ogg",
         source:
-          "Source: CBS Radio Sports, Jack Buck World Series broadcast from Candlestick Park, via Internet Archive."
+          "CBS Radio Sports, Jack Buck World Series broadcast from Candlestick Park, via Internet Archive."
       },
       {
         id: "marina-police-radio",
@@ -296,7 +296,7 @@ window.MEDIA_TRACKS_DATA = [
           "Police radio traffic from officers heading into the Marina District, relaying fires, gas leaks, and building collapses in real time.",
         href: "https://archive.org/download/LomaPrietaQuake_551/lomacop.ogg",
         source:
-          "Source: Loma Prieta police radio recording, via Internet Archive."
+          "Loma Prieta police radio recording, via Internet Archive."
       },
       {
         id: "allan-lindh-usgs-audio",
@@ -309,7 +309,7 @@ window.MEDIA_TRACKS_DATA = [
           "USGS geologist Allan Lindh discusses the San Andreas Fault segment that ruptured and why the quake produced such widespread damage.",
         href: "https://archive.org/download/LomaPrietaQuake_551/allanlindh.ogg",
         source:
-          "Source: U.S. Geological Survey audio interview with Allan Lindh, via Internet Archive."
+          "U.S. Geological Survey audio interview with Allan Lindh, via Internet Archive."
       },
       {
         id: "caltrans-whipple-oral-history",
@@ -323,7 +323,7 @@ window.MEDIA_TRACKS_DATA = [
         href:
           "https://archive.org/download/casadt_000223/casadt_000223_a_access.mp3",
         source:
-          "Source: California Department of Transportation, Loma Prieta Oral History Project (Steve Whipple), via Internet Archive."
+          "California Department of Transportation, Loma Prieta Oral History Project (Steve Whipple), via Internet Archive."
       }
     ]
   }
