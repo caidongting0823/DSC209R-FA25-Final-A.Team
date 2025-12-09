@@ -932,11 +932,18 @@
     }
 
     .modal-media img,
-    .modal-media iframe {
+    .modal-media iframe,
+    .modal-media video,
+    .modal-media audio {
       max-width: 100%;
       max-height: 70vh;
       border-radius: 10px;
       display: block;
+    }
+
+    /* Audio players are short horizontally; let them keep natural height */
+    .modal-media audio {
+      max-height: none;
     }
 
     .modal-media a {
@@ -976,10 +983,29 @@
       font-size: 0.9rem;
       color: rgba(226, 232, 255, 0.92);
     }
+
+    .modal-type {
+      margin: 0 0 6px;
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(163, 255, 205, 0.9);
+    }
+
     .modal-source {
       margin: 0 0 4px;
       font-size: 0.78rem;
       color: var(--muted);
+    }
+
+    .modal-source a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    .modal-source a::after {
+      content: " ↗";
+      font-size: 0.78rem;
     }
 
     .modal-close {
@@ -1141,15 +1167,15 @@
 
           <dl class="stage-meta">
             <div class="stage-meta-row">
-              <dt>Time window</dt>
+              <dt>Time</dt>
               <dd id="stageWindow">—</dd>
             </div>
             <div class="stage-meta-row">
-              <dt>Typical magnitude</dt>
+              <dt>Magnitude</dt>
               <dd id="stageMag">—</dd>
             </div>
             <div class="stage-meta-row">
-              <dt>Focus</dt>
+              <dt>Highlight</dt>
               <dd id="stageFocus">—</dd>
             </div>
           </dl>
@@ -1233,6 +1259,7 @@
       </div>
       <div class="modal-text">
         <div class="modal-stage" id="modalStageLabel">Stage</div>
+        <p id="modalType" class="modal-type"></p>
         <h3 id="modalTitle">Title</h3>
         <p id="modalCaption">Caption text goes here.</p>
         <p id="modalSource" class="modal-source"></p>
@@ -1283,6 +1310,7 @@
     // Modal elements
     const mediaModal = document.getElementById("mediaModal");
     const modalStageLabel = document.getElementById("modalStageLabel");
+    const modalType = document.getElementById("modalType");
     const modalTitle = document.getElementById("modalTitle");
     const modalCaption = document.getElementById("modalCaption");
     const modalMediaLabel = document.getElementById("modalMediaLabel");
@@ -1362,6 +1390,11 @@
       modalTitle.textContent = titleText || "Media item";
       modalCaption.textContent = captionText || "Description coming soon.";
 
+      if (modalType) {
+        modalType.textContent = "";
+        modalType.style.display = "none";
+      }
+
       if (modalSource) {
         modalSource.textContent = "";
         modalSource.style.display = "none";
@@ -1383,10 +1416,58 @@
       modalTitle.textContent = titleText || "Media item";
       modalCaption.textContent = captionText || "Description coming soon.";
 
-      // Source / attribution line
+      // --- Determine media type from file extension ---
+      let mediaTypeLabel = "";
+      let cleanHref = "";
+      let ext = "";
+
+      if (href) {
+        cleanHref = href.split("?")[0];
+        ext = cleanHref.split(".").pop().toLowerCase();
+      }
+
+      const imageExts = ["jpg", "jpeg", "png", "gif", "webp"];
+      const videoExts = ["mp4", "m4v", "webm", "ogv"];
+      const audioExts = ["mp3", "ogg", "oga", "wav"];
+
+      const isImage = href && imageExts.includes(ext);
+      const isVideo = href && videoExts.includes(ext);
+      const isAudio = href && audioExts.includes(ext);
+
+      if (isImage) {
+        mediaTypeLabel = "PHOTO";
+      } else if (isVideo) {
+        mediaTypeLabel = "VIDEO";
+      } else if (isAudio) {
+        mediaTypeLabel = "AUDIO";
+      } else if (href) {
+        mediaTypeLabel = "EXTERNAL MEDIA";
+      } else {
+        mediaTypeLabel = "";
+      }
+
+      if (modalType) {
+        if (mediaTypeLabel) {
+          modalType.textContent = mediaTypeLabel;
+          modalType.style.display = "block";
+        } else {
+          modalType.textContent = "";
+          modalType.style.display = "none";
+        }
+      }
+
+      // --- Source / attribution line ---
       if (modalSource) {
         if (sourceText) {
-          modalSource.textContent = sourceText;
+          const sourceHref = entry.sourceHref || href || "";
+          if (sourceHref) {
+            modalSource.innerHTML =
+              `Source: <a href="${sourceHref}"
+                  target="_blank"
+                  rel="noopener noreferrer">${sourceText}</a>`;
+          } else {
+            modalSource.textContent = sourceText;
+          }
           modalSource.style.display = "block";
         } else {
           modalSource.textContent = "";
@@ -1394,20 +1475,53 @@
         }
       }
 
-      // Reset media content
+      // --- Embedded media content ---
       modalMediaLabel.innerHTML = "";
 
       if (href) {
-        // Try to infer file type from extension
-        const cleanHref = href.split("?")[0];
-        const ext = cleanHref.split(".").pop().toLowerCase();
-
-        if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
-          // Inline historical photo
+        if (isImage) {
           modalMediaLabel.innerHTML =
             `<img src="${href}" alt="${titleText || "Historical media"}">`;
+
+        } else if (isVideo) {
+          const videoType =
+            ext === "ogv" ? "video/ogg" :
+            ext === "webm" ? "video/webm" :
+            "video/mp4";
+
+          modalMediaLabel.innerHTML = `
+            <video controls preload="metadata">
+              <source src="${href}" type="${videoType}">
+              Your browser does not support the video tag.
+            </video>
+            <div style="margin-top:8px;font-size:0.8rem;color:var(--muted);">
+              If the video does not play,
+              <a href="${href}" target="_blank" rel="noopener noreferrer">
+                open it in a new tab
+              </a>.
+            </div>
+          `;
+
+        } else if (isAudio) {
+          const audioType =
+            ext === "ogg" || ext === "oga" ? "audio/ogg" :
+            ext === "wav" ? "audio/wav" :
+            "audio/mpeg";
+
+          modalMediaLabel.innerHTML = `
+            <audio controls preload="metadata" style="width:100%;">
+              <source src="${href}" type="${audioType}">
+              Your browser does not support the audio element.
+            </audio>
+            <div style="margin-top:8px;font-size:0.8rem;color:var(--muted);">
+              If the audio does not play,
+              <a href="${href}" target="_blank" rel="noopener noreferrer">
+                open it in a new tab
+              </a>.
+            </div>
+          `;
+
         } else {
-          // Fallback: link out (good for archive.org, audio, long video, etc.)
           modalMediaLabel.innerHTML =
             `<a href="${href}"
                 target="_blank"
@@ -1422,6 +1536,7 @@
 
       mediaModal.classList.remove("hidden");
     }
+
 
     modalClose.addEventListener("click", () => {
       mediaModal.classList.add("hidden");
@@ -1887,7 +2002,6 @@
           stage.anchorIndex = findAnchorIndex(stage.anchorDate);
         });
 
-        // Build media tracks aligned to the local (windowed) time scale
         const TRACK_ROW_HEIGHT = 34;
 
         const mediaTrackContainer = d3.select("#mediaTrackContainer");
@@ -1897,7 +2011,7 @@
           .style("height", (TRACK_ROW_HEIGHT * MEDIA_TRACKS.length) + "px");
 
         mediaItems = [];
-        const MIN_MEDIA_CENTER_GAP = 110;
+        const STACK_SHIFT_PX = 26; // small horizontal offset for items on the same day
 
         MEDIA_TRACKS.forEach((track, trackIndex) => {
           const row = mediaTrackContainer
@@ -1905,29 +2019,26 @@
             .attr("class", "media-track-row")
             .style("top", (trackIndex * TRACK_ROW_HEIGHT) + "px");
 
-          // Position items so they don’t visually stack on top of each other.
-          const positioned = track.items
-            .map(item => ({
-              item,
-              // We treat the CSS left value as the *center* because of translateX(-50%).
-              desiredCenter: xWindow(item.dayIndex) + (item.offsetPx || 0)
-            }))
-            .sort((a, b) => a.desiredCenter - b.desiredCenter);
+          // For each calendar day in this track, spread items slightly in X
+          // so multiple media at the same time don’t sit directly on top of each other.
+          const byDay = d3.group(track.items, d => d.dayIndex);
 
-          let lastCenter = -Infinity;
+          byDay.forEach(itemsForDay => {
+            const n = itemsForDay.length;
+            itemsForDay.forEach((item, i) => {
+              // Center around 0: e.g., for 3 items → offsets -1, 0, +1
+              const offsetIndex = i - (n - 1) / 2;
+              item._stackOffsetPx = offsetIndex * STACK_SHIFT_PX;
+            });
+          });
 
-          positioned.forEach(({ item, desiredCenter }) => {
-            let center = desiredCenter;
-            if (center < lastCenter + MIN_MEDIA_CENTER_GAP) {
-              center = lastCenter + MIN_MEDIA_CENTER_GAP;
-            }
-            lastCenter = center;
+          track.items.forEach(item => {
+            const center = xWindow(item.dayIndex) + (item._stackOffsetPx || 0);
 
             const block = row.append("button")
               .attr("class", "media-item")
               .style("left", center + "px")
               .on("click", () => {
-                // Jump to the step whose mid time is closest to this day
                 const anchorDate = new Date(startDate.getTime() + item.dayIndex * msPerDay);
                 const idx = findAnchorIndex(anchorDate);
                 slider.value = idx;
@@ -2125,13 +2236,12 @@
             if (item.dayIndex < windowStart || item.dayIndex > windowEnd) {
               dom.style.display = "none";
             } else {
-              const x = xWindow(item.dayIndex);
+              const x = xWindow(item.dayIndex) + (item._stackOffsetPx || 0);
               dom.style.display = "";
               dom.style.left = x + "px";
             }
           });
         }
-
 
         function updateEventLooker(step) {
           if (!eventLookerFeed || !eventLookerWindowLabel || !step) return;
