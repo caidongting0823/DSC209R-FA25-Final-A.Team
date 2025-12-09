@@ -1,0 +1,230 @@
+# 1989 Loma Prieta Earthquake: 25 Multimedia Resources Database
+
+The October 17, 1989 Loma Prieta earthquake struck at **5:04:15 PM Pacific Daylight Time**, measuring magnitude 6.9 and becoming the first major U.S. earthquake broadcast live on national television during the World Series. This curated database provides **25 direct-access multimedia resources** spanning video, audio, and photographs from the earthquake moment through the following days.
+
+## Videos: Live broadcasts and documentary footage
+
+### 1. FEMA/National Archives official documentary
+**Direct URL:** `https://archive.org/download/gov.archives.arc.951729/gov.archives.arc.951729_512kb.mp4`  
+**Alternative:** `https://archive.org/download/gov.archives.arc.951729/gov.archives.arc.951729.ogv`  
+**Timestamp:** October 17, 1989, 5:04 PM PT and aftermath  
+**Description:** Official federal documentary showing Candlestick Park during World Series, California Highway Patrol response to Bay Bridge and Cypress Structure damage, rescue attempts, and victim evacuations  
+**Source:** National Archives (ARC 951729), FEMA National Emergency Training Center  
+**License:** Public Domain (CC0)
+
+### 2. KGO-TV/ABC six-hour live earthquake coverage
+**Direct URL:** `https://archive.org/download/1989BayAreaEarthquake/videoplayback.mp4`  
+**Timestamp:** October 17, 1989, beginning 5:04 PM PT  
+**Description:** Six continuous hours of breaking news coverage from ABC affiliate KGO-TV, starting from the World Series broadcast interruption and continuing through the evening with field reports from damaged areas  
+**Source:** KGO-TV/ABC San Francisco  
+**Media Type:** Video (1.2 GB MP4)
+
+### 3. Marina District amateur footage
+**Direct URL:** `https://archive.org/download/1989.Loma.Prieta.Earthquake.Marina.District/1989.Loma.Prieta.Earthquake.Marina.District_512kb.mp4`  
+**Alternative:** `https://archive.org/download/1989.Loma.Prieta.Earthquake.Marina.District/1989.Loma.Prieta.Earthquake.Marina.District.ogv`  
+**Timestamp:** October 17, 1989, approximately 5:10 PM PT (immediately after earthquake)  
+**Description:** 4 minutes 21 seconds of footage shot by Exploratorium employee showing Marina District immediately after the quake—pavement cracking from liquefaction, smoke rising from fires that would engulf the neighborhood, building collapse in progress  
+**Source:** Michael Joseph Woody (videographer)  
+**License:** CC BY-NC-ND 3.0 US
+
+### 4. World Series broadcast - earthquake moment
+**Direct URL:** `https://archive.org/download/videoplayback-2021-02-08-t-170217.759/videoplayback%20-%202021-02-08T170217.759.mp4`  
+**Timestamp:** October 17, 1989, 5:04:15 PM PT (exact moment)  
+**Description:** ABC World Series Game 3 broadcast capturing the exact moment the earthquake struck Candlestick Park during pre-game show. Al Michaels says "I'll tell you what, we're having an earth—" before feed cuts. Includes stadium shaking, 13 seconds of technical difficulties graphic, and subsequent coverage  
+**Source:** Revelation Video (archived ABC broadcast)
+
+### 5. CBS 8 news report from Santa Cruz
+**Direct URL:** `https://archive.org/download/youtube-1GV5BsCt0ZQ/1GV5BsCt0ZQ.mp4`  
+**Timestamp:** October 18, 1989 (morning, day after earthquake)  
+**Description:** News report by MG Perez documenting earthquake damage in downtown Santa Cruz near the epicenter, showing Pacific Garden Mall destruction where 7 people died  
+**Source:** CBS 8 San Diego
+
+### 6. Cypress Street Viaduct documentary
+**Direct URL:** `https://archive.org/download/1-year-of-plainly-difficult-ray-wg-225-xy-i/A%20Brief%20History%20of%EF%BC%9A%20The%20Cypress%20Street%20Viaduct%20Collapse%20Disaster%201989%20%28Documentary%29%20%5ByJnB6g9N8-g%5D.mp4`  
+**Timestamp:** Documentary covering October 17, 1989 events  
+**Description:** Educational documentary detailing the I-880 Nimitz Freeway double-deck collapse that killed 42 people—the highest death toll from any single location. Includes engineering analysis, archival footage, and rescue operation documentation  
+**Source:** Plainly Difficult documentary series
+
+---
+
+## Audio: Radio broadcasts and oral histories
+
+### 7. Jack Buck CBS Radio broadcast from Candlestick
+**Direct URL:** `https://archive.org/download/LomaPrietaQuake_551/buckloma.ogg`  
+**Timestamp:** October 17, 1989, 5:04 PM PT (immediately after earthquake)  
+**Description:** CBS Radio baseball announcer Jack Buck's live broadcast from Candlestick Park immediately after the earthquake struck during World Series Game 3, with 60,000+ fans in attendance  
+**Source:** CBS Radio Sports  
+**License:** Public Domain
+
+### 8. Police radio in Marina District
+**Direct URL:** `https://archive.org/download/LomaPrietaQuake_551/lomacop.ogg`  
+**Timestamp:** October 17, 1989, evening (shortly after 5:04 PM PT)  
+**Description:** Radio communications from a police officer responding to the Marina District immediately after the earthquake, providing first-responder perspective on unfolding disaster  
+**Source:** Internet Archive / Public Domain audio collection
+
+### 9. USGS geologist Allan Lindh earthquake analysis
+**Direct URL:** `https://archive.org/download/LomaPrietaQuake_551/allanlindh.ogg`  
+**Timestamp:** October 1989 (post-earthquake)  
+**Description:** USGS geologist Allan Lindh explaining the earthquake's characteristics and the San Andreas Fault behavior that caused it  
+**Source:** U.S. Geological Survey
+
+### 10. Caltrans oral history - Steve Whipple/Cypress rescue
+**Direct URL (Part 1):** `https://archive.org/download/casadt_000223/casadt_000223_a_access.mp3`  
+**Direct URL (Part 2):** `https://archive.org/download/casadt_000223/casadt_000223_b_access.mp3`  
+**Timestamp:** Recorded November 7, 1989 (events described: October 17, 1989)  
+**Description:** 35-minute oral history with Steve Whipple, Caltrans Associate Bridge Engineer, detailing his discovery of survivor Buck Helm trapped in the Cypress Structure and the subsequent rescue operations  
+**Source:** Loma Prieta Oral History Project, California Department of Transportation
+
+---
+
+## Photographs: Government archives (Public Domain)
+
+### 11. Cypress Structure collapse - FEMA documentation
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/a/a9/FEMA_-_261_-_Photograph_by_FEMA_News_Photo_taken_on_10-01-1989_in_California.jpg`  
+**Timestamp:** October 17-18, 1989  
+**Description:** Double-deck Cypress Street Viaduct (I-880) showing catastrophic pancake collapse that killed 42 people in Oakland  
+**Source:** FEMA News Photo  
+**Resolution:** 2,983 × 2,002 pixels  
+**License:** Public Domain (PD-USGov-FEMA)
+
+### 12. Bay Bridge collapsed section
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/b/b0/LomaPrieta-BayBridge-collapsed-section2.jpg`  
+**Timestamp:** October 17, 1989 (evening, post-earthquake)  
+**Description:** San Francisco-Oakland Bay Bridge showing the 50-foot upper deck section that fell onto the lower deck, killing one person. Bridge was closed for one month  
+**Source:** U.S. Geological Survey  
+**License:** Public Domain (PD-USGov-USGS)
+
+### 13. Marina District liquefaction damage
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/3/35/Typical_liquefaction_damage_in_the_Marina_District_of_San_Francisco_1989.jpg`  
+**Timestamp:** October 1989  
+**Description:** Structural failure in Marina District showing building collapse caused by liquefaction of landfill soil—the neighborhood was built on debris from the 1906 earthquake  
+**Source:** U.S. Geological Survey  
+**Resolution:** 2,269 × 1,309 pixels  
+**License:** Public Domain (PD-USGov-USGS)
+
+### 14. Beach and Divisadero Streets apartment damage
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/d/d5/Damage_to_apartment_building_at_Beach_and_Divisadero_Streets_from_the_1989_Loma_Prieta_Earthquake.jpg`  
+**Timestamp:** October 17-18, 1989  
+**Description:** Collapsed apartment building at Beach and Divisadero Streets in Marina District showing typical soft-story failure  
+**Source:** USGS documentation  
+**Resolution:** 1,385 × 909 pixels  
+**License:** Public Domain
+
+### 15. Marina District spectators observing damage
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/7/75/Spectators_observe_damage_in_San_Francisco%27s_Marina_District_a_day_after_the_Loma_Prieta_Earthquake.jpg`  
+**Timestamp:** October 18, 1989 (day after earthquake)  
+**Description:** Citizens observing earthquake damage in Marina District the morning after, showing extent of building collapses and street damage  
+**Source:** USGS  
+**Resolution:** 1,754 × 1,038 pixels  
+**License:** Public Domain
+
+### 16. Landslide debris on highway
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/f/f8/USGS_-_1989_Loma_Prieta_earthquake_-_Landslide_Debris_on_Highway.jpg`  
+**Timestamp:** October 17-18, 1989  
+**Description:** Landslide debris blocking highway in the Santa Cruz Mountains near the earthquake epicenter  
+**Source:** U.S. Geological Survey  
+**License:** Public Domain (PD-USGov-USGS)
+
+### 17. Loma Prieta aerial damage view
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/4/4e/Loma_Prieta_aerial.jpg`  
+**Timestamp:** October 1989  
+**Description:** Aerial photograph showing earthquake damage extent across the Bay Area  
+**Source:** USGS aerial survey  
+**Resolution:** 2,412 × 1,404 pixels  
+**License:** Public Domain
+
+### 18. California freeway infrastructure damage
+**Direct URL:** `https://upload.wikimedia.org/wikipedia/commons/4/4a/EarthquakeFreewayCa1989.jpg`  
+**Timestamp:** October 1989  
+**Description:** Freeway infrastructure damage documenting structural failure of elevated roadways  
+**Source:** Government documentation  
+**License:** Public Domain
+
+---
+
+## USGS Digital Data Series DDS-29 collection
+
+The USGS maintains **103 high-resolution photographs** with direct file access. All images use this URL pattern:
+
+**Screen resolution (768×512):** `https://pubs.usgs.gov/dds/dds-29/screens/[XXX]sr.jpeg`  
+**Print resolution (2000×3000):** `https://pubs.usgs.gov/dds/dds-29/tif/[XXX].tif`  
+**Complete PDF (40 MB):** `https://pubs.usgs.gov/dds/dds-29/dds-29.pdf`
+
+### 19. USGS Marina District fire documentation (Image 002)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/002sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/002.tif`  
+**Timestamp:** October 17, 1989, evening  
+**Description:** Marina District building collapse and fire aftermath, one of the three defining images of the disaster  
+**Source:** USGS DDS-29, J.K. Nakata photographer  
+**License:** Public Domain
+
+### 20. USGS Bay Bridge damage series (Image 014)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/014sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/014.tif`  
+**Timestamp:** October 18-22, 1989  
+**Description:** San Francisco-Oakland Bay Bridge span failure documentation showing upper deck collapse onto lower deck  
+**Source:** USGS DDS-29  
+**License:** Public Domain
+
+### 21. USGS Cypress Structure Oakland (Image 017)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/017sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/017.tif`  
+**Timestamp:** October 17-21, 1989  
+**Description:** Cypress Street Viaduct collapse showing structural failure details and rescue operation context  
+**Source:** USGS DDS-29, H.G. Wilshire photographer  
+**License:** Public Domain
+
+### 22. USGS Santa Cruz Pacific Garden Mall (Image 084)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/084sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/084.tif`  
+**Timestamp:** October 17-21, 1989  
+**Description:** Devastated Pacific Garden Mall in downtown Santa Cruz showing unreinforced masonry building collapses near the epicenter  
+**Source:** USGS DDS-29, C.E. Meyer photographer  
+**License:** Public Domain
+
+### 23. USGS Summit Road near epicenter (Image 062)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/062sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/062.tif`  
+**Timestamp:** October 1989  
+**Description:** Damage along Summit Road in the Santa Cruz Mountains, closest documented location to the Loma Prieta Peak epicenter  
+**Source:** USGS DDS-29  
+**License:** Public Domain
+
+### 24. USGS Moss Landing liquefaction (Image 098)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/098sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/098.tif`  
+**Timestamp:** October 1989  
+**Description:** Severe liquefaction damage at Moss Landing showing ground failure and structural damage in sandy coastal soils  
+**Source:** USGS DDS-29  
+**License:** Public Domain
+
+### 25. USGS Index Map - all damage locations (Image 001)
+**Direct URL:** `https://pubs.usgs.gov/dds/dds-29/screens/001sr.jpeg`  
+**High-res:** `https://pubs.usgs.gov/dds/dds-29/tif/001.tif`  
+**Timestamp:** Documentation covering October-November 1989  
+**Description:** Complete index map showing locations of all 103 USGS photographic documentation sites across San Francisco and Monterey Bay regions  
+**Source:** USGS DDS-29  
+**License:** Public Domain
+
+---
+
+## Summary by location and time period
+
+| Location | Resources | Time Coverage |
+|----------|-----------|---------------|
+| Candlestick Park/World Series | #1, #2, #4, #7 | October 17, 5:04 PM PT (exact moment) |
+| Cypress Structure/I-880 | #1, #6, #10, #11, #21 | October 17 evening through October 21 |
+| Bay Bridge | #1, #12, #20 | October 17 evening onwards |
+| Marina District | #1, #2, #3, #8, #13, #14, #15, #19 | October 17 evening through October 18 |
+| Santa Cruz | #5, #22, #23 | October 17-21 |
+| Santa Cruz Mountains/Epicenter | #9, #16, #23 | October 17 onwards |
+| Watsonville/Moss Landing | #24 | October 17-21 |
+| Bay Area aerial/overview | #17, #18, #25 | October 1989 |
+
+## Technical notes for implementation
+
+All URLs in this database point directly to downloadable media files suitable for embedding in visualization projects. Government sources (USGS, FEMA, National Archives) are **Public Domain** and require no licensing. Internet Archive materials have individual licenses noted. Wikimedia Commons files use the standard `upload.wikimedia.org` direct file pattern.
+
+**Attribution format for government images:** "Photo by [Photographer], U.S. Geological Survey, from USGS Digital Data Series DDS-29 (1999)" or "National Archives and Records Administration / FEMA"
+
+For additional resources, the complete **USGS DDS-29 collection** contains 103 images accessible via the URL patterns provided, organized by geographic region from San Francisco through Monterey Bay.

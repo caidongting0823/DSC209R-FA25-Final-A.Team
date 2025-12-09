@@ -122,6 +122,20 @@
       background: transparent;
     }
 
+    .map-annotation {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      max-width: 230px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: rgba(3, 7, 18, 0.88);
+      border-radius: 10px;
+      padding: 6px 9px;
+      border: 1px solid rgba(148, 163, 234, 0.35);
+      pointer-events: none;
+    }
+
     path.state {
       fill: var(--panel);
       stroke: rgba(122, 162, 255, 0.18);
@@ -651,6 +665,18 @@
       height: 100%;
       display: block;
     }
+    .mini-mainshock-line {
+      stroke: rgba(248, 113, 113, 0.95);
+      stroke-width: 1.4px;
+      stroke-dasharray: 4, 3;
+    }
+
+    .mini-mainshock-label {
+      font-size: 0.72rem;
+      fill: #fecaca;
+      pointer-events: none;
+    }
+
     .timeline-area {
       fill: rgba(245, 228, 196, 0.18);
       stroke: rgba(245, 228, 196, 0.9);
@@ -902,10 +928,32 @@
       font-size: 0.86rem;
       text-align: center;
       padding: 16px;
+      overflow: hidden;
     }
+
+    .modal-media img,
+    .modal-media iframe {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 10px;
+      display: block;
+    }
+
     .modal-media a {
       color: var(--accent2);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(163, 255, 205, 0.7);
+      background: rgba(5, 12, 30, 0.95);
+      white-space: nowrap;
     }
+
+    .modal-media a:hover {
+      background: rgba(9, 18, 48, 0.98);
+    }
+
     .modal-text {
       padding: 14px 16px 16px;
     }
@@ -939,6 +987,69 @@
       align-self: flex-end;
     }
 
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.96), rgba(3, 7, 18, 0.98));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+    }
+
+    .loading-card {
+      max-width: 420px;
+      padding: 20px 22px 18px;
+      border-radius: 16px;
+      background: rgba(5, 10, 30, 0.98);
+      border: 1px solid rgba(163, 255, 205, 0.6);
+      box-shadow: 0 24px 44px rgba(0,0,0,0.85);
+      text-align: left;
+    }
+
+    .loading-badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent2);
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      margin-bottom: 6px;
+    }
+
+    .loading-title {
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-size: 1.15rem;
+      color: var(--museum-gold);
+      margin-bottom: 6px;
+    }
+
+    .loading-text {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .loading-spinner {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 3px solid rgba(148, 163, 234, 0.5);
+      border-top-color: var(--accent2);
+      animation: loadingSpin 0.8s linear infinite;
+      margin-top: 4px;
+    }
+
+    @keyframes loadingSpin {
+      to { transform: rotate(360deg); }
+    }
+
     /* Responsive: on small screens we allow vertical scroll again */
     @media (max-width: 900px) {
       body {
@@ -963,8 +1074,21 @@
 <body>
   <!-- Minimal top bar with only “back to project overview” -->
   <header class="top-nav">
+    <a href="final.html" class="back-link">← Back to Main Page</a>
     <a href="final_intro.html" class="back-link">← Back to Introduction</a>
   </header>
+
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-card" role="status" aria-live="polite">
+      <div class="loading-badge">Preparing story mode</div>
+      <div class="loading-title">Loading the Loma Prieta timeline…</div>
+      <p class="loading-text">
+        Fetching USGS earthquake records and drawing thousands of events on the map.
+        This may take a few seconds on slower connections.
+      </p>
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
 
   <main class="story-layout">
     <div class="top-row">
@@ -976,7 +1100,10 @@
             <span id="currentDateLabel">Loading…</span>
           </div>
         </div>
-        <svg id="mapSvg"></svg>
+      <div id="mapAnnotation" class="map-annotation">
+          Circles show earthquakes in this story window. Larger circles are stronger shakes.
+      </div>
+      <svg id="mapSvg"></svg>
 
         <!-- Mainshock notification overlay -->
         <div id="mainshockOverlay" class="mainshock-overlay hidden">
@@ -1002,9 +1129,8 @@
           <div class="stage-kicker">Stage overview</div>
           <h2 id="stageTitle">Foreshocks</h2>
           <p id="stageBlurb">
-            In the months leading up to the Loma Prieta earthquake, a handful of smaller tremors rattled the region.
-            To most residents they felt like routine “little quakes”, but in hindsight they were early signs of stress
-            building along the San Andreas Fault.
+            For months, small earthquakes flickered around the Bay Area. To most residents they felt like routine
+            “little quakes”, but together they trace the slow build-up of stress along the San Andreas Fault.
           </p>
 
           <dl class="stage-meta">
@@ -1119,6 +1245,8 @@
     const mapPanel = document.getElementById("map-panel");
     const width = mapPanel.clientWidth || 800;
     const height = mapPanel.clientHeight || Math.round(window.innerHeight * 0.55);
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const mapAnnotation = document.getElementById("mapAnnotation");
 
     const svg = d3.select("#mapSvg")
       .attr("width", width)
@@ -1234,16 +1362,33 @@
       const stageText = entry.stageLabel || "";
       const titleText = entry.title || "";
       const captionText = entry.caption || "";
-      const href = entry.href;
+      const href = entry.href || "";
 
       modalStageLabel.textContent = stageText || "Media track";
       modalTitle.textContent = titleText || "Media item";
       modalCaption.textContent = captionText || "Description coming soon.";
 
+      // Reset media content
+      modalMediaLabel.innerHTML = "";
+
       if (href) {
-        modalMediaLabel.innerHTML =
-          `Media placeholder – later you can embed this resource or ` +
-          `<a href="${href}" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.`;
+        // Try to infer file type from extension
+        const cleanHref = href.split("?")[0];
+        const ext = cleanHref.split(".").pop().toLowerCase();
+
+        if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
+          // Inline historical photo
+          modalMediaLabel.innerHTML =
+            `<img src="${href}" alt="${titleText || "Historical media"}">`;
+        } else {
+          // Fallback: link out (good for archive.org, etc.)
+          modalMediaLabel.innerHTML =
+            `<a href="${href}"
+                target="_blank"
+                rel="noopener noreferrer">
+               Open media in a new tab
+             </a>`;
+        }
       } else {
         modalMediaLabel.textContent =
           "Media placeholder – insert photo, video, or audio here.";
@@ -1313,18 +1458,44 @@
         const mainEvent = events.find(d => d.place && d.place.includes("Loma Prieta"));
         const totalEvents = events.length;
 
+        // How many whole days are in our story window?
         const totalDays = Math.round((endDate - startDate) / msPerDay);
 
+        // Find which day index the mainshock falls on (relative to startDate)
         let mainshockIndex = 0;
         if (mainEvent) {
           mainshockIndex = Math.floor((mainEvent.time - startDate) / msPerDay);
         }
-        const rebuildingStart = Math.floor(totalDays * 0.85);
-        const aftershockStartIndex = Math.min(mainshockIndex + 1, totalDays);
 
-        const foreshockEndDate = new Date(mainshockDate.getTime() - msPerDay);
-        const aftershockStartDate = new Date(mainshockDate.getTime() + msPerDay);
+        // Fallback mainshock time (if we somehow don't find it in the dataset)
+        const mainshockTimeUtc = mainEvent
+          ? mainEvent.time
+          : new Date(Date.UTC(1989, 9, 18, 0, 4, 0)); // ≈ Oct 17, 1989 5:04 pm PT
+
+        // Where the "rebuilding" phase starts in calendar days
+        const rebuildingStart = Math.floor(totalDays * 0.85);
+
+        // Stage boundaries in time:
+        //  - Foreshocks: everything before 1 day before the mainshock
+        //  - Main shock: 1 day before → 1 day after the mainshock
+        //  - Aftershocks: 1 day after the mainshock → rebuildingStart
+        const foreshockEndTime = new Date(mainshockTimeUtc.getTime() - msPerDay);
+        const aftershockStartTime = new Date(mainshockTimeUtc.getTime() + msPerDay);
+
+        // Convert those boundary times into day indices for labeling / media anchors
+        const foreshockEndIdx = Math.max(
+          0,
+          Math.floor((foreshockEndTime - startDate) / msPerDay)
+        );
+        const aftershockStartIndex = Math.min(
+          totalDays,
+          Math.max(0, Math.floor((aftershockStartTime - startDate) / msPerDay))
+        );
+
+        // Human-friendly boundary dates (clamped to whole days)
+        const foreshockEndDate = new Date(startDate.getTime() + foreshockEndIdx * msPerDay);
         const rebuildingStartDate = new Date(startDate.getTime() + rebuildingStart * msPerDay);
+        const aftershockStartDate = new Date(startDate.getTime() + aftershockStartIndex * msPerDay);
 
         // --- Daily bins for Event Progress Overview (earthquake counts per calendar day) ---
         const dayBins = [];
@@ -1354,48 +1525,52 @@
 
 
         // Stage metadata (drives right panel)
+        // Stage metadata (drives right panel)
         const STAGES = {
           foreshocks: {
             id: "foreshocks",
-            title: "Foreshocks",
+            title: "Foreshocks – a background hum",
             blurb:
-              "In the months leading up to the main shock, a series of smaller earthquakes quietly marked the buildup of stress along the fault.",
+              "For months, small earthquakes flicker around the Bay Area. To residents they feel like routine tremors, but together they trace the slow build-up of stress along the San Andreas Fault.",
             window: `${formatDate(startDate)} – ${formatDate(foreshockEndDate)}`,
-            magRange: "Mostly M3–M5 events",
-            focus: "Subtle stress changes before the main slip.",
+            magRange: "Mostly M2–M5 events",
+            focus: "Quiet signals that the crust is changing before anyone notices.",
             anchorDate: startDate
           },
           mainshock: {
             id: "mainshock",
             title: "Main shock – October 17, 1989",
             blurb:
-              "At 5:04 pm local time, a magnitude 6.9 earthquake struck near Loma Prieta, disrupting the World Series, collapsing structures, and shaking the Bay Area.",
-            window: formatDate(mainshockDate),
-            magRange: "M6.9",
-            focus: "Sudden rupture along the San Andreas Fault.",
-            anchorDate: mainshockDate
+              "At 5:04 pm local time, a magnitude 6.9 earthquake strikes near Loma Prieta. What had been background noise suddenly becomes a disaster: the World Series broadcast cuts out, freeways collapse, and shaking ripples across the Bay.",
+            // One day before → one day after the mainshock
+            window: `${formatDate(foreshockEndDate)} – ${formatDate(aftershockStartDate)}`,
+            magRange: "M 6.9 mainshock",
+            focus: "A single rupture that releases most of the seismic energy in this story window.",
+            anchorDate: mainshockTimeUtc
           },
           aftershocks: {
             id: "aftershocks",
-            title: "Aftershocks",
+            title: "Aftershocks – the fault settles",
             blurb:
-              "In the days and months that followed, a cloud of aftershocks traced how the fault adjusted after the main rupture.",
+              "In the days and months that follow, hundreds of aftershocks rattle the region. They sketch the outline of the rupture zone and remind people that the main event is over, but the ground is still adjusting.",
             window: `${formatDate(aftershockStartDate)} – ${formatDate(rebuildingStartDate)}`,
-            magRange: "Mostly M3–M5, with occasional larger events",
-            focus: "Fault readjustment and lingering seismicity.",
+            magRange: "Mostly M2–M5, with occasional larger events",
+            focus: "Fault readjustment and lingering seismicity mapped out in clusters.",
             anchorDate: aftershockStartDate
           },
           rebuilding: {
             id: "rebuilding",
             title: "Rebuilding and reflection",
             blurb:
-              "As seismic activity tapered off, attention turned to inspection, retrofitting, and redesigning vulnerable infrastructure across the Bay Area.",
+              "As seismic activity tapers off, attention shifts from shaking to what it revealed: weak structures, soft ground, and gaps in preparedness. Inspections, retrofits, and new policies reshape the region so that the next big earthquake will play out differently.",
             window: `${formatDate(rebuildingStartDate)} – ${formatDate(endDate)}`,
             magRange: "Fewer felt events in the dataset",
-            focus: "Long-term changes to buildings, bridges, and policy.",
+            focus: "Long-term changes to buildings, bridges, and policy — lessons carried forward.",
             anchorDate: endDate
           }
         };
+
+
 
         // Resolve media tracks from external data (media_tracks.js).
         // Items can either provide an explicit `dayIndex`, or an `anchor`
@@ -1426,20 +1601,15 @@
             };
           })
         }));
-          
+
         function stageForTime(t) {
-          if (t < mainshockDate) return "foreshocks";
-          if (t < aftershockStartDate) return "mainshock";
+          if (t < foreshockEndTime) return "foreshocks";
+          if (t < aftershockStartTime) return "mainshock";
           if (t < rebuildingStartDate) return "aftershocks";
           return "rebuilding";
         }
 
         // Compute mainshock time window for epicenter focus
-        const mainshockTimeUtc = mainEvent
-          ? mainEvent.time
-          : new Date(Date.UTC(1989, 9, 17, 0, 4, 0));
-
-        // Blink the mainshock marker for about one hour of simulated time
         const mainshockBlinkEnd = new Date(
           mainshockTimeUtc.getTime() + 60 * 60 * 1000
         );
@@ -1451,6 +1621,7 @@
         if (mainshockTimeLabel) {
           mainshockTimeLabel.textContent = formatTimePT(mainshockTimeUtc);
         }
+
 
         // Base "California-scale" camera: fit around all regional events
         const coordsAll = events.map(d => [d.longitude, d.latitude]);
@@ -1652,6 +1823,20 @@
           .attr("y1", miniMargin.top)
           .attr("y2", miniHeight - miniMargin.bottom);
 
+        // Mark the main shock on the overview timeline
+        const mainshockX = xGlobal(mainshockTimeUtc);
+        miniSvg.append("line")
+          .attr("class", "mini-mainshock-line")
+          .attr("x1", mainshockX)
+          .attr("x2", mainshockX)
+          .attr("y1", miniMargin.top)
+          .attr("y2", miniHeight - miniMargin.bottom);
+
+        miniSvg.append("text")
+          .attr("class", "mini-mainshock-label")
+          .attr("x", mainshockX + 4)
+          .attr("y", miniMargin.top + 10)
+          .text("Main shock");
 
         // Helper: map target date → nearest step index
         function findAnchorIndex(targetDate) {
@@ -1829,6 +2014,23 @@
           const stageId = stageForTime(timeStart);
           if (stageId !== currentStageId) {
             updateStageUI(stageId, STAGES);
+          }
+
+          // Small map annotation in the bottom-left corner
+          if (mapAnnotation) {
+            let text;
+            if (stageId === "foreshocks") {
+              text = "Foreshocks: a steady background of smaller quakes building toward the main shock.";
+            } else if (stageId === "mainshock") {
+              text = "Main shock: the red circle marks the M 6.9 Loma Prieta epicenter.";
+            } else if (stageId === "aftershocks") {
+              text = "Aftershocks: clusters show where the fault continues to adjust after the rupture.";
+            } else if (stageId === "rebuilding") {
+              text = "Rebuilding: seismicity fades, but this pattern of shaking guides inspections and retrofits.";
+            } else {
+              text = "Circles show earthquakes in this story window. Larger circles are stronger shakes.";
+            }
+            mapAnnotation.textContent = text;
           }
         }
 
@@ -2132,6 +2334,11 @@
             updateViewByStep(idx, true);
           });
         });
+
+        // All data loaded and first frame drawn – hide loading overlay
+        if (loadingOverlay) {
+          loadingOverlay.classList.add("hidden");
+        }
       });
     });
   </script>
