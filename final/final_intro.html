@@ -1218,7 +1218,7 @@
 
       // Magnitude bins + counts
       const magBins = [
-        { label: 'M < 2.0',   min: -Infinity, max: 2.0,      color: 'rgba(122,162,255,0.6)' },
+        { label: 'M <2.0',   min: -Infinity, max: 2.0,      color: 'rgba(122,162,255,0.6)' },
         { label: 'M 2.0–3.9', min: 2.0,       max: 4.0,      color: 'var(--accent2)' },
         { label: 'M 4.0–4.9', min: 4.0,       max: 5.0,      color: 'rgba(255,184,108,0.95)' },
         { label: 'M ≥ 5.0',   min: 5.0,       max: Infinity, color: 'var(--danger)' }
@@ -1345,6 +1345,7 @@
       updateLegend(magBins.map(b => ({ color: b.color, label: b.label })));
 
       // --- Inline numeric labels on the right side of each band ---
+      // --- Inline numeric labels on the right side of each band ---
       const labelX = width - LABEL_GUTTER / 2;
 
       bands.forEach((band, i) => {
@@ -1353,36 +1354,57 @@
 
         const midY = (y(band.y0) + y(band.y1)) / 2;
 
-        // Count in the band color
-        svg.append('text')
-          .attr('x', labelX)
-          .attr('y', midY - 4)
-          .attr('fill', magBins[i].color)
-          .attr('font-size', '13px')
-          .attr('font-weight', '600')
-          .style('text-anchor', 'middle')
-          .text(stats.count.toLocaleString());
+      // Choose precision so tiny percentages don’t show as 0.0%
+      let pctDisplay;
+      if (stats.pct < 0.01) {
+        pctDisplay = stats.pct.toFixed(3);   // e.g. 0.023%
+      } else if (stats.pct < 0.1) {
+        pctDisplay = stats.pct.toFixed(2);   // e.g. 0.08%
+      } else {
+        pctDisplay = stats.pct.toFixed(1);   // normal case
+      }
 
-        // Percentage + label below, in muted text
-        svg.append('text')
-          .attr('x', labelX)
-          .attr('y', midY + 12)
-          .attr('fill', 'var(--muted)')
-          .attr('font-size', '11px')
-          .style('text-anchor', 'middle')
-          .text(`${stats.pct.toFixed(1)}% · ${stats.label}`);
-      });
+      // Count + percentage as two lines, same colored block
+      const mainText = svg.append('text')
+       .attr('x', labelX)
+       .attr('y', midY - 10)
+       .attr('fill', magBins[i].color)
+       .attr('font-size', '18px')
+       .attr('font-weight', '700')
+       .style('text-anchor', 'middle');
+
+      // First line: count
+      mainText.append('tspan')
+       .text(stats.count.toLocaleString());
+
+      // Second line: percentage
+      mainText.append('tspan')
+        .attr('x', labelX)
+        .attr('dy', '1.2em')
+        .attr('font-size', '13px')
+       .text(`(${pctDisplay}%)`);
+
+      // Label below in muted color
+      svg.append('text')
+        .attr('x', labelX)
+        .attr('y', midY + 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '11px')
+        .attr('font-weight', '500')
+            .style('text-anchor', 'middle')
+            .text(magBins[i].label);
+        });
 
       document.getElementById('loading-magnitude').style.display = 'none';
       flex.style('display', 'block'); // mag-flex-inner is display:block in CSS
     }
 
-    // 3. Depth: Magnitude vs Depth scatter
+    // 3. Depth: Magnitude vs Depth scatter with band counts (merged with Plot 5 info)
     function initComparison() {
       const container = d3.select('#comparison-viz');
       const width = 800;
       const height = 400;
-      const margin = { top: 40, right: 40, bottom: 60, left: 70 };
+      const margin = { top: 60, right: 40, bottom: 60, left: 70 }; // extra top room for labels
 
       const svg = container.append('svg')
         .attr('width', width)
@@ -1393,10 +1415,14 @@
       const data = earthquakeData;
 
       const magExtent = d3.extent(data, d => d.mag);
-      const depthExtent = d3.extent(data, d => d.depth);
+
+      // Use only non-negative depths for band stats (same as Plot 5)
+      const depthData = data.filter(d => !isNaN(d.depth) && d.depth >= 0);
+      const depthExtent = d3.extent(depthData, d => d.depth);
       const maxDepth = depthExtent[1];
+
       const mainshock = data.reduce((a, b) => (b.mag > a.mag ? b : a), data[0]);
-      const meanDepth = d3.mean(data, d => d.depth);
+      const meanDepth = d3.mean(depthData, d => d.depth);
       const KM_TO_MI = 0.621371;
       const meanDepthMi = meanDepth * KM_TO_MI;
       const mainshockDepthMi = mainshock.depth * KM_TO_MI;
@@ -1410,27 +1436,56 @@
         .domain([0, Math.ceil(magExtent[1])])
         .range([height - margin.bottom, margin.top]);
 
-      // Shaded depth bands: upper crust / mid-crust / deeper
+      // Depth bands (same cut points as Plot 5), with colors for shading + labels
       const depthBands = [
-        { x0: 0,  x1: 5 },
-        { x0: 5,  x1: 15 },
-        { x0: 15, x1: maxDepth }
+        {
+          id: 'shallow',
+          label: '0–5 km',
+          desc: 'Shallow (upper crust)',
+          min: 0,
+          max: 5,
+          fillColor: 'rgba(163,255,205,0.06)',
+          labelColor: 'rgba(163,255,205,0.9)'
+        },
+        {
+          id: 'mid',
+          label: '5–15 km',
+          desc: 'Mid-crust',
+          min: 5,
+          max: 15,
+          fillColor: 'rgba(122,162,255,0.05)',
+          labelColor: 'var(--accent)'
+        },
+        {
+          id: 'deep',
+          label: '>15 km',
+          desc: 'Deeper',
+          min: 15,
+          max: maxDepth,
+          fillColor: 'rgba(255,107,107,0.05)',
+          labelColor: 'rgba(255,107,107,0.9)'
+        }
       ];
 
+      // Counts & percentages per band (the “Plot 5” info)
+      const totalDepth = depthData.length;
+      depthBands.forEach(b => {
+        const inBand = depthData.filter(d => d.depth >= b.min && d.depth < b.max);
+        b.count = inBand.length;
+        b.pct = (b.count / totalDepth) * 100;
+      });
+
+      // Shaded depth bands in the scatter background
       svg.selectAll('.depth-band')
         .data(depthBands)
         .enter()
         .append('rect')
         .attr('class', 'depth-band')
-        .attr('x', d => x(d.x0))
+        .attr('x', d => x(d.min))
         .attr('y', margin.top)
-        .attr('width', d => x(d.x1) - x(d.x0))
+        .attr('width', d => x(d.max) - x(d.min))
         .attr('height', height - margin.bottom - margin.top)
-        .attr('fill', (d, i) =>
-          i === 0 ? 'rgba(163,255,205,0.06)' :
-          i === 1 ? 'rgba(122,162,255,0.05)' :
-                    'rgba(255,107,107,0.05)'
-        );
+        .attr('fill', d => d.fillColor);
 
       // Axes
       svg.append('g')
@@ -1460,6 +1515,33 @@
         .attr('font-size', '12px')
         .style('text-anchor', 'middle')
         .text('Magnitude');
+
+      // Inline numeric labels for each depth band (like Plot 2)
+      const countY = margin.top + 8;
+      const pctY   = margin.top + 24;
+
+      depthBands.forEach(b => {
+        const midX = (x(b.min) + x(b.max)) / 2;
+
+        // Count
+        svg.append('text')
+          .attr('x', midX)
+          .attr('y', countY)
+          .attr('fill', b.labelColor)
+          .attr('font-size', '12px')
+          .attr('font-weight', '600')
+          .style('text-anchor', 'middle')
+          .text(b.count.toLocaleString());
+
+        // Percentage
+        svg.append('text')
+          .attr('x', midX)
+          .attr('y', pctY)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '11px')
+          .style('text-anchor', 'middle')
+          .text(`${b.pct.toFixed(1)}%`);
+      });
 
       function depthColor(d) {
         if (d.depth < 5) return 'rgba(163,255,205,0.9)';  // shallow
@@ -1505,16 +1587,16 @@
 
       svg.append('text')
         .attr('x', x(meanDepth))
-        .attr('y', margin.top - 10)
+        .attr('y', margin.top - 12)
         .attr('fill', 'var(--accent2)')
         .attr('font-size', '11px')
         .attr('font-weight', '500')
         .style('text-anchor', meanDepth > maxDepth / 2 ? 'end' : 'start')
         .text(`Avg depth ≈ ${meanDepth.toFixed(1)} km (${meanDepthMi.toFixed(1)} mi)`);
 
-      // Mainshock label – moved slightly left & below the marker
-      const mainLabelX = x(mainshock.depth) - 10;
-      const mainLabelY = y(mainshock.mag) + 4;
+      // Mainshock label
+      const mainLabelX = x(mainshock.depth) + 105;
+      const mainLabelY = y(mainshock.mag) + 5;
 
       const mainLabel = svg.append('text')
         .attr('x', mainLabelX)
@@ -1524,6 +1606,7 @@
         .attr('font-weight', '600')
         .style('text-anchor', 'end');
 
+
       mainLabel.append('tspan')
         .text('M6.9 mainshock');
 
@@ -1532,14 +1615,14 @@
         .attr('dy', '1.2em')
         .text(`${mainshock.depth.toFixed(1)} km (${mainshockDepthMi.toFixed(1)} mi)`);
 
-      // Depth legend with short km + mi labels (two lines)
+      // Legend: shallow / mid / deep with km+mi
       const legend = svg.append('g')
-        .attr('transform', `translate(${width - margin.right - 135}, ${margin.top})`);
+        .attr('transform', `translate(${width - margin.right - 135}, ${margin.top + 4})`);
 
       const legendItems = [
-        { color: 'rgba(163,255,205,0.9)', km: 'Shallow',   mi: '(0–5km / 0–3mi)' },
-        { color: 'var(--accent)',         km: 'Mid',  mi: '(5–15km / 3–9mi)' },
-        { color: 'rgba(255,107,107,0.9)', km: 'Deep',   mi: '(> 15km / 9mi)' }
+        { color: 'rgba(163,255,205,0.9)', km: 'Shallow', mi: '(0–5 km / 0–3 mi)' },
+        { color: 'var(--accent)',         km: 'Mid',     mi: '(5–15 km / 3–9 mi)' },
+        { color: 'rgba(255,107,107,0.9)', km: 'Deep',    mi: '(>15 km / >9 mi)' }
       ];
 
       const rows = legend.selectAll('g.legend-row')
@@ -1578,7 +1661,6 @@
     }
 
     // 4. Spatial Distribution
-    // 4. Spatial Distribution – aftershock cluster vs background
     function initSpatial() {
       const container = d3.select('#spatial-viz');
       const width = 800;
