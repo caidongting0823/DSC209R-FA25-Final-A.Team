@@ -584,17 +584,19 @@
     <div class="content-wrapper">
       <div class="section-header">
         <div class="section-number">04 — Geography</div>
-        <h2>The Fault's Fingerprint</h2>
+        <h2>A Cluster Along the Fault</h2>
         <p class="section-description">
-          Plotting earthquake locations reveals the San Andreas fault system's geometry.<br>
-          The mainshock epicenter sits at the heart of a complex seismic zone.
+          Mapping epicenters across the Bay Area reveals how the Loma&nbsp;Prieta mainshock sits
+          inside a tight cluster of aftershocks along the San Andreas fault. The controls below
+          compare all earthquakes with just the first month of aftershocks and the broader
+          regional background.
         </p>
       </div>
 
       <div class="controls">
         <button class="control-btn active" data-layer="all">All Earthquakes</button>
-        <button class="control-btn" data-layer="mainshock">Mainshock Only</button>
-        <button class="control-btn" data-layer="aftershocks">Aftershocks</button>
+        <button class="control-btn" data-layer="after30">Post-Quake First 30 Days</button>
+        <button class="control-btn" data-layer="background">Background & Late Aftershocks</button>
       </div>
 
       <div class="viz-container">
@@ -608,24 +610,25 @@
       <div class="legend">
         <div class="legend-item">
           <div class="legend-color" style="background: var(--danger);"></div>
-          <span>Mainshock (M 6.9)</span>
+          <span>Mainshock (M&nbsp;6.9)</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background: var(--warning);"></div>
-          <span>M 4.0+</span>
+          <span>Aftershocks, first 30 days</span>
         </div>
         <div class="legend-item">
-          <div class="legend-color" style="background: var(--accent);"></div>
-          <span>M 3.0 - 3.9</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: rgba(122,162,255,0.4);"></div>
-          <span>M &lt; 3.0</span>
+          <div class="legend-color" style="background: rgba(122,162,255,0.5);"></div>
+          <span>Background earthquakes</span>
         </div>
       </div>
 
       <div class="stat-highlight">
-        The mainshock epicenter: <strong>37.04°N, 121.88°W</strong> in the Santa Cruz Mountains, at a depth of <strong>17.2 km</strong> below the surface.
+        Across the whole sequence, epicenters trace the San Andreas fault system, with almost
+        one-third of all earthquakes occurring within roughly <strong>30 km</strong> of the
+        mainshock and nearly half within about <strong>80 km</strong>. In the
+        <strong>first 30 days after October&nbsp;17</strong>, more than
+        <strong>80%</strong> of earthquakes fell inside this 30 km radius, forming the tight
+        golden cluster around the epicenter in the map above.
       </div>
     </div>
   </section>
@@ -651,7 +654,11 @@
       </div>
 
       <div class="stat-highlight">
-        Most earthquakes clustered between <strong>0-5 km depth</strong>, within the upper crust. The mainshock occurred deeper at <strong>17.2 km</strong>, releasing energy from within the brittle crust.
+        Among earthquakes with reliable depth estimates, about
+        <strong>half</strong> occurred shallower than <strong>5 km</strong>, and another
+        <strong>46%</strong> between <strong>5–15 km</strong>. Only around
+        <strong>3%</strong> reached depths greater than <strong>15 km</strong> — a band that
+        includes the <strong>17.2 km</strong> M6.9 mainshock at the base of this sequence.
       </div>
     </div>
   </section>
@@ -732,6 +739,24 @@
     const MAINSHOCK_TIME = new Date('1989-10-18T00:04:15.190Z');
     const MAINSHOCK_LAT = 37.0361667;
     const MAINSHOCK_LON = -121.8798333;
+    // 30-day window we use for the “aftershock cluster” story
+    const AFTERSHOCK_WINDOW_END = new Date(
+      MAINSHOCK_TIME.getTime() + 30 * 24 * 60 * 60 * 1000
+    );
+
+    // Haversine distance (km) from mainshock, for geographic context
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371; // km
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
 
     // Load and parse data
     let earthquakeData = [];
@@ -758,15 +783,38 @@
     d3.csv('../dataset/us_loma_prieta_1988_1990_allmags.csv').then(data => {
       // Parse and filter data
       earthquakeData = data
+      earthquakeData = data
         .filter(d => d.type === 'earthquake')
-        .map(d => ({
-          time: new Date(d.time),
-          lat: +d.latitude,
-          lon: +d.longitude,
-          depth: +d.depth,
-          mag: +d.mag,
-          place: d.place
-        }))
+        .map(d => {
+          const time  = new Date(d.time);
+          const lat   = +d.latitude;
+          const lon   = +d.longitude;
+          const depth = +d.depth;
+          const mag   = +d.mag;
+
+          // Time phase relative to the mainshock
+          let phase;
+          if (time < MAINSHOCK_TIME) {
+            phase = 'before';
+          } else if (time <= AFTERSHOCK_WINDOW_END) {
+            phase = 'after30';
+          } else {
+            phase = 'late';
+          }
+
+          const distKm = haversineKm(MAINSHOCK_LAT, MAINSHOCK_LON, lat, lon);
+
+          return {
+            time,
+            lat,
+            lon,
+            depth,
+            mag,
+            place: d.place,
+            phase,   // 'before', 'after30', or 'late'
+            distKm   // distance from epicenter in km
+          };
+        })
         .filter(d => !isNaN(d.mag) && !isNaN(d.depth));
 
       // Update total count
@@ -1530,6 +1578,7 @@
     }
 
     // 4. Spatial Distribution
+    // 4. Spatial Distribution – aftershock cluster vs background
     function initSpatial() {
       const container = d3.select('#spatial-viz');
       const width = 800;
@@ -1550,8 +1599,40 @@
         .domain(d3.extent(earthquakeData, d => d.lat))
         .range([height - margin.bottom, margin.top]);
 
-      const mainshock = earthquakeData.find(d => d.mag === 6.9);
-      const aftershocks = earthquakeData.filter(d => d.time > MAINSHOCK_TIME && d.time < new Date('1990-01-01'));
+      // Mainshock + time windows
+      const mainshock = earthquakeData.reduce(
+        (a, b) => (b.mag > a.mag ? b : a),
+        earthquakeData[0]
+      );
+
+      const firstMonthAfter = earthquakeData.filter(d => d.phase === 'after30');
+      const background = earthquakeData.filter(d => d.phase !== 'after30');
+
+      function pointRadius(d) {
+        if (d === mainshock) return 12;
+        if (d.mag >= 4) return 5;
+        if (d.mag >= 3) return 3;
+        return 1.5;
+      }
+
+      function pointColor(d) {
+        if (d === mainshock) return 'var(--danger)';          // mainshock
+        if (d.phase === 'after30') return 'var(--warning)';   // first 30 days
+        return 'rgba(122,162,255,0.5)';                       // background
+      }
+
+      function pointOpacity(d) {
+        if (d === mainshock) return 1;
+        if (d.phase === 'after30') return 0.9;
+        return 0.4;
+      }
+
+      function phaseLabel(d) {
+        if (d === mainshock) return 'Mainshock';
+        if (d.phase === 'before') return 'Before mainshock';
+        if (d.phase === 'after30') return 'Within 30 days after';
+        return 'After 30 days';
+      }
 
       function updateLayer(layer) {
         svg.selectAll('.earthquake-dot').remove();
@@ -1559,10 +1640,10 @@
         let data;
         if (layer === 'all') {
           data = earthquakeData;
-        } else if (layer === 'mainshock') {
-          data = [mainshock];
+        } else if (layer === 'after30') {
+          data = firstMonthAfter;
         } else {
-          data = aftershocks;
+          data = background;
         }
 
         svg.selectAll('.earthquake-dot')
@@ -1571,34 +1652,28 @@
           .attr('class', 'earthquake-dot')
           .attr('cx', d => x(d.lon))
           .attr('cy', d => y(d.lat))
-          .attr('r', d => {
-            if (d.mag === 6.9) return 12;
-            if (d.mag >= 4) return 5;
-            if (d.mag >= 3) return 3;
-            return 1.5;
-          })
-          .attr('fill', d => {
-            if (d.mag === 6.9) return 'var(--danger)';
-            if (d.mag >= 4) return 'var(--warning)';
-            if (d.mag >= 3) return 'var(--accent)';
-            return 'rgba(122,162,255,0.4)';
-          })
-          .attr('stroke', d => d.mag === 6.9 ? 'white' : 'none')
-          .attr('stroke-width', 2)
+          .attr('r', d => pointRadius(d))
+          .attr('fill', d => pointColor(d))
+          .attr('stroke', d => d === mainshock ? 'white' : 'none')
+          .attr('stroke-width', d => d === mainshock ? 2 : 0)
           .attr('opacity', 0)
           .on('mouseover', (event, d) => {
+            const distText = d.distKm != null
+              ? `<br>${d.distKm.toFixed(1)} km from epicenter`
+              : '';
             showTooltip(event, {
               title: `M ${d.mag.toFixed(2)}`,
-              detail: `${d.place}<br>Depth: ${d.depth.toFixed(1)} km`
+              detail: `${d.place}<br>${phaseLabel(d)}${distText}`
             });
           })
           .on('mouseout', hideTooltip)
           .transition()
           .duration(600)
           .delay(() => Math.random() * 150)
-          .attr('opacity', d => d.mag === 6.9 ? 1 : 0.6);
+          .attr('opacity', d => pointOpacity(d));
       }
 
+      // Axes
       svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height - margin.bottom})`)
@@ -1626,6 +1701,7 @@
         .style('text-anchor', 'middle')
         .text('Latitude');
 
+      // Button interactions
       d3.selectAll('#section-spatial .control-btn').on('click', function() {
         d3.selectAll('#section-spatial .control-btn').classed('active', false);
         d3.select(this).classed('active', true);
@@ -1633,7 +1709,9 @@
         updateLayer(layer);
       });
 
+      // Initial render
       updateLayer('all');
+
       document.getElementById('loading-spatial').style.display = 'none';
       container.style('display', 'block');
     }
@@ -1643,12 +1721,7 @@
       const container = d3.select('#depth-viz');
       const width = 800;
       const height = 400;
-      const margin = { top: 40, right: 40, bottom: 60, left: 60 };
-
-      const LABEL_GUTTER = 80;
-      const plotRight   = width - margin.right - LABEL_GUTTER;
-      const plotWidth   = plotRight - margin.left;
-
+      const margin = { top: 40, right: 40, bottom: 60, left: 70 };
 
       const svg = container.append('svg')
         .attr('width', width)
@@ -1656,27 +1729,46 @@
         .attr('viewBox', `0 0 ${width} ${height}`)
         .attr('style', 'max-width: 100%; height: auto;');
 
-      const bins = d3.bin()
-        .domain([0, d3.max(earthquakeData, d => d.depth)])
-        .thresholds(20)
-        (earthquakeData.map(d => d.depth));
+      // Use only non-negative depths for a clean crustal picture
+      const depthData = earthquakeData.filter(d => !isNaN(d.depth) && d.depth >= 0);
+
+      const depthBands = [
+        { id: 'shallow', label: '0–5 km',   desc: 'Shallow (upper crust)',  min: 0,  max: 5,  color: 'rgba(163,255,205,0.9)' },
+        { id: 'mid',     label: '5–15 km',  desc: 'Mid-crust',             min: 5,  max: 15, color: 'var(--accent)' },
+        { id: 'deep',    label: '>15 km',   desc: 'Deeper',                min: 15, max: 80, color: 'rgba(255,107,107,0.9)' }
+      ];
+
+      const total = depthData.length;
+
+      depthBands.forEach(b => {
+        const inBand = depthData.filter(d => d.depth >= b.min && d.depth < b.max);
+        b.count = inBand.length;
+        b.pct   = (b.count / total) * 100;
+      });
+
+      // Find mainshock depth and which band it falls into
+      const mainshock = earthquakeData.reduce(
+        (a, b) => (b.mag > a.mag ? b : a),
+        earthquakeData[0]
+      );
+      const mainshockDepth = mainshock.depth;
+      const mainBand = depthBands.find(b => mainshockDepth >= b.min && mainshockDepth < b.max);
 
       const x = d3.scaleBand()
-        .domain(bins.map((d, i) => i))
+        .domain(depthBands.map(b => b.label))
         .range([margin.left, width - margin.right])
-        .padding(0.1);
+        .padding(0.35);
 
       const y = d3.scaleLinear()
-        .domain([0, d3.max(bins, d => d.length)])
+        .domain([0, d3.max(depthBands, b => b.count)])
         .nice()
         .range([height - margin.bottom, margin.top]);
 
+      // Axes
       svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x)
-          .tickValues([0, 5, 10, 15, 19])
-          .tickFormat(i => `${bins[i] ? bins[i].x0.toFixed(0) : ''}`));
+        .call(d3.axisBottom(x));
 
       svg.append('g')
         .attr('class', 'axis')
@@ -1689,69 +1781,93 @@
         .attr('fill', 'var(--muted)')
         .attr('font-size', '12px')
         .style('text-anchor', 'middle')
-        .text('Depth (km)');
+        .text('Depth band (km)');
 
       svg.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('x', -(height / 2))
-        .attr('y', 15)
+        .attr('y', 18)
         .attr('fill', 'var(--muted)')
         .attr('font-size', '12px')
         .style('text-anchor', 'middle')
-        .text('Number of Earthquakes');
+        .text('Number of earthquakes');
 
-      svg.selectAll('rect')
-        .data(bins)
+      // Bars
+      svg.selectAll('.depth-bar')
+        .data(depthBands)
         .join('rect')
-        .attr('x', (d, i) => x(i))
+        .attr('class', 'depth-bar')
+        .attr('x', d => x(d.label))
         .attr('y', height - margin.bottom)
         .attr('width', x.bandwidth())
         .attr('height', 0)
-        .attr('fill', 'var(--accent)')
+        .attr('fill', d => d.color)
         .on('mouseover', (event, d) => {
           showTooltip(event, {
-            title: `${d.length.toLocaleString()} earthquakes`,
-            detail: `Depth ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)} km`
+            title: `${d.count.toLocaleString()} earthquakes`,
+            detail: `${d.desc}<br>${d.label} (${d.pct.toFixed(1)}% of events)`
           });
         })
         .on('mouseout', hideTooltip)
         .transition()
         .duration(800)
-        .delay((d, i) => i * 30)
-        .attr('y', d => y(d.length))
-        .attr('height', d => height - margin.bottom - y(d.length));
+        .delay((d, i) => i * 200)
+        .attr('y', d => y(d.count))
+        .attr('height', d => height - margin.bottom - y(d.count));
 
-      // Mainshock depth marker
-      const mainshockDepth = 17.214;
-      const mainshockBin = bins.findIndex(b => mainshockDepth >= b.x0 && mainshockDepth < b.x1);
-      
-      svg.append('line')
-        .attr('x1', x(mainshockBin) + x.bandwidth() / 2)
-        .attr('x2', x(mainshockBin) + x.bandwidth() / 2)
-        .attr('y1', margin.top)
-        .attr('y2', height - margin.bottom)
-        .attr('stroke', 'var(--danger)')
-        .attr('stroke-width', 2)
-        .attr('stroke-dasharray', '4,4')
-        .attr('opacity', 0)
-        .transition()
-        .delay(1000)
-        .duration(400)
-        .attr('opacity', 1);
-
-      svg.append('text')
-        .attr('x', x(mainshockBin) + x.bandwidth() / 2)
-        .attr('y', margin.top - 10)
-        .attr('fill', 'var(--danger)')
-        .attr('font-size', '11px')
+      // Counts above each bar
+      svg.selectAll('.depth-label-count')
+        .data(depthBands)
+        .join('text')
+        .attr('class', 'depth-label-count')
+        .attr('x', d => x(d.label) + x.bandwidth() / 2)
+        .attr('y', d => y(d.count) - 8)
+        .attr('fill', 'var(--ink)')
+        .attr('font-size', '12px')
         .attr('font-weight', '600')
         .style('text-anchor', 'middle')
-        .text('Mainshock')
-        .attr('opacity', 0)
-        .transition()
-        .delay(1200)
-        .duration(400)
-        .attr('opacity', 1);
+        .text(d => d.count.toLocaleString());
+
+      // Percentages just below the counts (still above the bar)
+      svg.selectAll('.depth-label-pct')
+        .data(depthBands)
+        .join('text')
+        .attr('class', 'depth-label-pct')
+        .attr('x', d => x(d.label) + x.bandwidth() / 2)
+        .attr('y', d => y(d.count) + 8)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '11px')
+        .style('text-anchor', 'middle')
+        .text(d => `${d.pct.toFixed(1)}%`);
+
+      // Mainshock marker on its depth band
+      if (mainBand) {
+        const mx = x(mainBand.label) + x.bandwidth() / 2;
+        const my = y(mainBand.count) - 40;
+
+        svg.append('circle')
+          .attr('cx', mx)
+          .attr('cy', my)
+          .attr('r', 7)
+          .attr('fill', 'var(--danger)')
+          .attr('stroke', 'white')
+          .attr('stroke-width', 2);
+
+        const label = svg.append('text')
+          .attr('x', mx + 10)
+          .attr('y', my - 4)
+          .attr('fill', 'var(--danger)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '600');
+
+        label.append('tspan')
+          .text('M6.9 mainshock');
+
+        label.append('tspan')
+          .attr('x', mx + 10)
+          .attr('dy', '1.2em')
+          .text(`${mainshockDepth.toFixed(1)} km`);
+      }
 
       document.getElementById('loading-depth').style.display = 'none';
       container.style('display', 'block');
