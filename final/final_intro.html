@@ -441,7 +441,7 @@
       </div>
 
       <div class="stat-highlight">
-        The <strong>6.9 magnitude mainshock</strong> released <strong>over 25 times more energy</strong> than all other recorded events in this period combined, accounting for about <strong>96%</strong> of the total seismic energy.
+        In the <strong>year after</strong> the mainshock, more than <strong>15,000 earthquakes</strong> were recorded — about <strong>1.7×</strong> as many as in the year before, and over <strong>half</strong> of all events in this two-year window.
       </div>
     </div>
   </section>
@@ -475,7 +475,7 @@
       <div class="legend" id="magnitude-legend"></div>
 
       <div class="stat-highlight">
-        <strong>25,466</strong> earthquakes were magnitude 2.0 or less — small tremors often unfelt by humans. Only <strong>75</strong> exceeded magnitude 4.0, and just <strong>7</strong> reached magnitude 5.0 or higher.
+        Out of all recorded earthquakes in this period, <strong>25,466</strong> — nearly <strong>89%</strong> — were magnitude 2.0 or less, tiny tremors often unfelt by humans. Only <strong>75</strong> events exceeded magnitude 4.0, and just <strong>7</strong> (about <strong>0.02%</strong>) reached magnitude 5.0 or higher.
       </div>
     </div>
   </section>
@@ -612,6 +612,35 @@
 
       <div class="stat-highlight">
         The mainshock released energy equivalent to roughly <strong>340 kilotons of TNT</strong> — around <strong>22 times</strong> the atomic bomb dropped on Hiroshima.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Data & Methods -->
+  <section class="section" id="section-methods">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <div class="section-number">07 — Data & Methods</div>
+        <h2>How We Built This View</h2>
+        <p class="section-description">
+          A brief look at how we collected, filtered, and transformed the data that powers this page.
+        </p>
+      </div>
+
+      <div class="stat-highlight">
+        <p>
+          Data comes from the <strong>USGS ComCat earthquake catalog</strong> for a box around the San Francisco Bay Area,
+          between <strong>June 1, 1988</strong> and <strong>June 30, 1990</strong>. We query all events in this window and
+          then filter to records whose <code>type</code> is <strong>"earthquake"</strong>, keeping only rows with valid
+          magnitude and depth values.
+        </p>
+        <p>
+          Times are shown in UTC and centered on the <strong>1989-10-18 00:04:15</strong> mainshock. Energy estimates use
+          the Gutenberg–Richter relation <em>E = 10<sup>1.5M + 4.8</sup></em> joules, and TNT equivalents assume
+          <strong>4.184×10<sup>12</sup> J</strong> per kiloton. This matches the pipeline in our
+          <code>DataDownloader_LomaPrieta.py</code> script and ensures every visual on this page is backed by a
+          reproducible method.
+        </p>
       </div>
     </div>
   </section>
