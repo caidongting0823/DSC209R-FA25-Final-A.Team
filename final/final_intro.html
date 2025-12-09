@@ -1381,7 +1381,7 @@
       flex.style('display', 'block'); // mag-flex-inner is display:block in CSS
     }
 
-    // 3. Depth: Magnitude vs Depth scatter with band counts (merged with Plot 5 info)
+    // 3. Depth: Magnitude vs Depth scatter with band counts
     function initComparison() {
       const container = d3.select('#comparison-viz');
       const width = 800;
@@ -1398,7 +1398,7 @@
 
       const magExtent = d3.extent(data, d => d.mag);
 
-      // Use only non-negative depths for band stats (same as Plot 5)
+      // Use only non-negative depths for band stats
       const depthData = data.filter(d => !isNaN(d.depth) && d.depth >= 0);
       const depthExtent = d3.extent(depthData, d => d.depth);
       const maxDepth = depthExtent[1];
@@ -1418,7 +1418,7 @@
         .domain([0, Math.ceil(magExtent[1])])
         .range([height - margin.bottom, margin.top]);
 
-      // Depth bands (same cut points as Plot 5), with colors for shading + labels
+      // Depth bands, with colors for shading + labels
       const depthBands = [
         {
           id: 'shallow',
@@ -1449,7 +1449,7 @@
         }
       ];
 
-      // Counts & percentages per band (the “Plot 5” info)
+      // Counts & percentages per band
       const totalDepth = depthData.length;
       depthBands.forEach(b => {
         const inBand = depthData.filter(d => d.depth >= b.min && d.depth < b.max);
@@ -1780,12 +1780,12 @@
       container.style('display', 'block');
     }
 
-    // 6. Energy Release
+    // 5. Energy Release
     function initEnergy() {
       const container = d3.select('#energy-viz');
       const width = 800;
       const height = 400;
-      const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+      const margin = { top: 50, right: 40, bottom: 60, left: 80 };
 
       const svg = container.append('svg')
         .attr('width', width)
@@ -1793,30 +1793,54 @@
         .attr('viewBox', `0 0 ${width} ${height}`)
         .attr('style', 'max-width: 100%; height: auto;');
 
-      // Calculate energy (simplified): E ≈ 10^(1.5*M + 4.8) joules
-      // We'll use relative units for visualization
+      // Sort events in time and find the M6.9 mainshock
       const sortedData = [...earthquakeData].sort((a, b) => a.time - b.time);
-      
-      let cumEnergy = 0;
+      const mainshock = sortedData.reduce(
+        (a, b) => (b.mag > a.mag ? b : a),
+        sortedData[0]
+      );
+
+      // Convert magnitude to energy using Gutenberg–Richter:
+      // E ≈ 10^(1.5M + 4.8) joules, then to kilotons of TNT
+      const KT_PER_J = 1 / 4.184e12;
+
+      let cumAll = 0;
+      let cumNoMain = 0;
+
       const energyData = sortedData.map(d => {
-        const energy = Math.pow(10, 1.5 * d.mag);
-        cumEnergy += energy;
+        const energyJ = Math.pow(10, 1.5 * d.mag + 4.8);
+        const energyKt = energyJ * KT_PER_J;
+        const isMainshock = d === mainshock;
+
+        cumAll += energyKt;
+        if (!isMainshock) {
+          cumNoMain += energyKt;
+        }
+
         return {
           time: d.time,
-          cumEnergy: cumEnergy,
+          cumAll,
+          cumNoMain,
+          isMainshock,
           mag: d.mag
         };
       });
+
+      const totalAll = cumAll;
+      const totalNoMain = cumNoMain;
+      const mainshockEnergyKt = totalAll - totalNoMain;
+      const mainshockShare = (mainshockEnergyKt / totalAll) * 100;
 
       const x = d3.scaleTime()
         .domain(d3.extent(energyData, d => d.time))
         .range([margin.left, width - margin.right]);
 
       const y = d3.scaleLinear()
-        .domain([0, d3.max(energyData, d => d.cumEnergy)])
+        .domain([0, d3.max(energyData, d => d.cumAll)])
         .nice()
         .range([height - margin.bottom, margin.top]);
 
+      // Axes
       svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height - margin.bottom})`)
@@ -1830,27 +1854,23 @@
       svg.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('x', -(height / 2))
-        .attr('y', 15)
+        .attr('y', 20)
         .attr('fill', 'var(--muted)')
         .attr('font-size', '12px')
         .style('text-anchor', 'middle')
-        .text('Cumulative Seismic Energy (relative)');
+        .text('Cumulative Energy (kilotons TNT, approx.)');
 
-      // Area chart
-      const area = d3.area()
-        .x(d => x(d.time))
-        .y0(height - margin.bottom)
-        .y1(d => y(d.cumEnergy))
-        .curve(d3.curveMonotoneX);
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 15)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('June 1988 → June 1990');
 
-      const path = svg.append('path')
-        .datum(energyData)
-        .attr('fill', 'url(#energy-gradient)')
-        .attr('d', area);
-
-      // Gradient
-      const gradient = svg.append('defs')
-        .append('linearGradient')
+      // Gradient for total energy area
+      const defs = svg.append('defs');
+      const gradient = defs.append('linearGradient')
         .attr('id', 'energy-gradient')
         .attr('x1', '0%')
         .attr('y1', '0%')
@@ -1860,50 +1880,121 @@
       gradient.append('stop')
         .attr('offset', '0%')
         .attr('stop-color', 'var(--accent)')
-        .attr('stop-opacity', 0.8);
+        .attr('stop-opacity', 0.9);
 
       gradient.append('stop')
         .attr('offset', '100%')
         .attr('stop-color', 'var(--accent)')
         .attr('stop-opacity', 0.1);
 
-      // Animate
-      const pathLength = path.node().getTotalLength();
-      path
+      // Area for "all energy"
+      const areaAll = d3.area()
+        .x(d => x(d.time))
+        .y0(height - margin.bottom)
+        .y1(d => y(d.cumAll))
+        .curve(d3.curveMonotoneX);
+
+      const pathAll = svg.append('path')
+        .datum(energyData)
+        .attr('fill', 'url(#energy-gradient)')
+        .attr('stroke', 'var(--accent)')
+        .attr('stroke-width', 1.5)
+        .attr('d', areaAll);
+
+      // Line for "all energy except mainshock" hugging the bottom
+      const lineNoMain = d3.line()
+        .x(d => x(d.time))
+        .y(d => y(d.cumNoMain))
+        .curve(d3.curveMonotoneX);
+
+      svg.append('path')
+        .datum(energyData)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent2)')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '4,4')
+        .attr('d', lineNoMain);
+
+      // Animate the main area
+      const pathLength = pathAll.node().getTotalLength();
+      pathAll
         .attr('stroke-dasharray', pathLength)
         .attr('stroke-dashoffset', pathLength)
         .transition()
         .duration(2000)
         .attr('stroke-dashoffset', 0);
 
-      // Mainshock marker
-      svg.append('line')
-        .attr('x1', x(MAINSHOCK_TIME))
-        .attr('x2', x(MAINSHOCK_TIME))
-        .attr('y1', margin.top)
-        .attr('y2', height - margin.bottom)
-        .attr('stroke', 'var(--danger)')
-        .attr('stroke-width', 2)
-        .attr('stroke-dasharray', '4,4')
-        .attr('opacity', 0)
-        .transition()
-        .delay(1500)
-        .duration(400)
-        .attr('opacity', 1);
+      // Mainshock marker and annotation
+      const mainPoint = energyData.find(d => d.isMainshock);
+      if (mainPoint) {
+        const mx = x(mainPoint.time);
+        const my = y(mainPoint.cumAll);
 
-      svg.append('text')
-        .attr('x', x(MAINSHOCK_TIME))
-        .attr('y', margin.top - 10)
-        .attr('fill', 'var(--danger)')
-        .attr('font-size', '12px')
-        .attr('font-weight', '600')
-        .style('text-anchor', 'middle')
-        .text('Oct 17, 1989')
-        .attr('opacity', 0)
-        .transition()
-        .delay(1700)
-        .duration(400)
-        .attr('opacity', 1);
+        svg.append('line')
+          .attr('x1', mx)
+          .attr('x2', mx)
+          .attr('y1', margin.top)
+          .attr('y2', height - margin.bottom)
+          .attr('stroke', 'var(--danger)')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', '4,4');
+
+        svg.append('circle')
+          .attr('cx', mx)
+          .attr('cy', my)
+          .attr('r', 5)
+          .attr('fill', 'var(--danger)')
+          .attr('stroke', 'white')
+          .attr('stroke-width', 2);
+
+        const shareLabel = mainshockShare.toFixed(0);
+
+        const label = svg.append('text')
+          .attr('x', mx + 10)
+          .attr('y', my - 20)
+          .attr('fill', 'var(--danger)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '600');
+
+        label.append('tspan')
+          .text('M6.9 mainshock');
+
+        label.append('tspan')
+          .attr('x', mx + 10)
+          .attr('dy', '1.2em')
+          .text(`≈ ${shareLabel}% of total energy`);
+      }
+
+      // Simple legend in the top-left
+      const legend = svg.append('g')
+        .attr('transform', `translate(${margin.left}, ${margin.top - 25})`);
+
+      const legendItems = [
+        { color: 'var(--accent)',  label: 'All earthquakes (cumulative)' },
+        { color: 'var(--accent2)', label: 'All except mainshock' }
+      ];
+
+      const legendRows = legend.selectAll('g')
+        .data(legendItems)
+        .enter()
+        .append('g')
+        .attr('transform', (d, i) => `translate(${i * 220}, 0)`);
+
+      legendRows.append('line')
+        .attr('x1', 0)
+        .attr('y1', 0)
+        .attr('x2', 24)
+        .attr('y2', 0)
+        .attr('stroke-width', 3)
+        .attr('stroke', d => d.color)
+        .attr('stroke-dasharray', (d, i) => i === 1 ? '4,4' : null);
+
+      legendRows.append('text')
+        .attr('x', 30)
+        .attr('y', 4)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '11px')
+        .text(d => d.label);
 
       document.getElementById('loading-energy').style.display = 'none';
       container.style('display', 'block');
