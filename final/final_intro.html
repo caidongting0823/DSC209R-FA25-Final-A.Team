@@ -699,34 +699,40 @@
     </div>
   </section>
 
-  <!-- Section 6: Data & Methods -->
-  <section class="section" id="section-methods">
+  <!-- Section 6: Sequence over Time -->
+  <section class="section" id="section-sequence">
     <div class="content-wrapper">
       <div class="section-header">
-        <div class="section-number">06 — Data & Methods</div>
-        <h2>How We Built This View</h2>
+        <div class="section-number">06 — Sequence</div>
+        <h2>Foreshocks, Mainshock,<br>and the Aftershock Tail</h2>
         <p class="section-description">
-          A brief look at how we collected, filtered, and transformed the data that powers this page.
+          Plotting magnitude against time relative to the mainshock shows how quiet the
+          months before Loma&nbsp;Prieta were, how abruptly the M6.9 shock struck, and how
+          quickly the largest aftershocks faded in the days that followed.
         </p>
       </div>
 
-      <div class="stat-highlight">
-        <p>
-          Data comes from the <strong>USGS ComCat earthquake catalog</strong> for a box around the San Francisco Bay Area,
-          between <strong>June 1, 1988</strong> and <strong>June 30, 1990</strong>. We query all events in this window and
-          then filter to records whose <code>type</code> is <strong>"earthquake"</strong>, keeping only rows with valid
-          magnitude and depth values.
-        </p>
-        <p>
-          Times are shown in UTC and centered on the <strong>1989-10-18 00:04:15</strong> mainshock. Energy estimates use
-          the Gutenberg–Richter relation <em>E = 10<sup>1.5M + 4.8</sup></em> joules, and TNT equivalents assume
-          <strong>4.184×10<sup>12</sup> J</strong> per kiloton. This matches the pipeline in our
-          <code>DataDownloader_LomaPrieta.py</code> script and ensures every visual on this page is backed by a
-          reproducible method.
-        </p>
+      <div class="controls">
+        <button class="control-btn active" data-seq="all">All Events</button>
+        <button class="control-btn" data-seq="before">Before Mainshock</button>
+        <button class="control-btn" data-seq="week">First 7 Days After</button>
+        <button class="control-btn" data-seq="late">Later Period</button>
+      </div>
+
+      <div class="viz-container">
+        <div class="loading" id="loading-sequence">
+          <div class="spinner"></div>
+          <p>Plotting the sequence…</p>
+        </div>
+        <div id="sequence-viz" style="display:none;"></div>
+      </div>
+
+      <div class="stat-highlight" id="sequence-stat">
+        <!-- JS will fill this with a data-driven summary -->
       </div>
     </div>
   </section>
+
 
   <!-- Call to Action -->
   <section class="cta-section">
@@ -836,6 +842,7 @@
       initComparison();
       initSpatial();
       initEnergy();
+      initSequence();
     });
 
     // Tooltip functions
@@ -1944,7 +1951,6 @@
         .text('How was energy calculated?');
 
 
-
       // Gradient for total energy area
       const defs = svg.append('defs');
       const gradient = defs.append('linearGradient')
@@ -2113,6 +2119,233 @@
       document.getElementById('loading-energy').style.display = 'none';
       container.style('display', 'block');
     }
+
+    // 6. Sequence over time – magnitude vs days relative to mainshock
+    function initSequence() {
+      const container = d3.select('#sequence-viz');
+      const width = 800;
+      const height = 400;
+      const margin = { top: 60, right: 40, bottom: 60, left: 60 };
+      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+      if (!container.size()) return; // safety
+
+      const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('style', 'max-width: 100%; height: auto;');
+
+      // Derive days relative to mainshock + sequence phase
+      const data = earthquakeData.map(d => {
+        const days = (d.time - MAINSHOCK_TIME) / MS_PER_DAY;
+        let seqPhase;
+        if (days < 0) seqPhase = 'before';
+        else if (days < 7) seqPhase = 'week';
+        else seqPhase = 'late';
+        return {
+          ...d,
+          daysFromMainshock: days,
+          seqPhase
+        };
+      });
+
+      const magExtent = d3.extent(data, d => d.mag);
+      const dayExtent = d3.extent(data, d => d.daysFromMainshock);
+      const mainshock = data.reduce((a, b) => (b.mag > a.mag ? b : a), data[0]);
+
+      const x = d3.scaleLinear()
+        .domain(dayExtent)
+        .nice()
+        .range([margin.left, width - margin.right]);
+
+      const y = d3.scaleLinear()
+        .domain([0, Math.ceil(magExtent[1])])
+        .range([height - margin.bottom, margin.top]);
+
+      // Background bands: before, first week, later
+      const phaseBands = [
+        {
+          id: 'before',
+          min: dayExtent[0],
+          max: 0,
+          color: 'rgba(122,162,255,0.05)'
+        },
+        {
+          id: 'week',
+          min: 0,
+          max: 7,
+          color: 'rgba(255,217,61,0.08)'
+        },
+        {
+          id: 'late',
+          min: 7,
+          max: dayExtent[1],
+          color: 'rgba(163,255,205,0.04)'
+        }
+      ];
+
+      svg.selectAll('.seq-band')
+        .data(phaseBands)
+        .enter()
+        .append('rect')
+        .attr('class', 'seq-band')
+        .attr('x', d => x(d.min))
+        .attr('y', margin.top)
+        .attr('width', d => Math.max(0, x(d.max) - x(d.min)))
+        .attr('height', height - margin.bottom - margin.top)
+        .attr('fill', d => d.color);
+
+      // Axes
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x));
+
+      svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Days relative to mainshock (Oct 17, 1989)');
+
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -(height / 2))
+        .attr('y', 20)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '12px')
+        .style('text-anchor', 'middle')
+        .text('Magnitude');
+
+      // Vertical mainshock line
+      svg.append('line')
+        .attr('x1', x(0))
+        .attr('x2', x(0))
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', 'var(--danger)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,4');
+
+      svg.append('text')
+        .attr('x', x(0))
+        .attr('y', margin.top - 12)
+        .attr('fill', 'var(--danger)')
+        .attr('font-size', '11px')
+        .attr('font-weight', '600')
+        .style('text-anchor', 'middle')
+        .text('Mainshock');
+
+      const rScale = d3.scaleLinear()
+        .domain([magExtent[0], magExtent[1]])
+        .range([1.5, 7]);
+
+      function seqColor(d) {
+        if (d === mainshock) return 'var(--danger)';
+        if (d.seqPhase === 'before') return 'rgba(122,162,255,0.85)';
+        if (d.seqPhase === 'week') return 'var(--warning)';
+        return 'rgba(163,255,205,0.9)';
+      }
+
+      const dotsGroup = svg.append('g').attr('class', 'sequence-dots');
+
+      function filteredData(layer) {
+        if (layer === 'before') return data.filter(d => d.seqPhase === 'before');
+        if (layer === 'week') return data.filter(d => d.seqPhase === 'week');
+        if (layer === 'late') return data.filter(d => d.seqPhase === 'late');
+        return data;
+      }
+
+      function updateSequence(layer) {
+        const current = filteredData(layer);
+
+        const dots = dotsGroup.selectAll('circle')
+          .data(current, d => d.time);
+
+        dots.enter()
+          .append('circle')
+          .attr('cx', d => x(d.daysFromMainshock))
+          .attr('cy', d => y(d.mag))
+          .attr('r', d => rScale(d.mag))
+          .attr('fill', d => seqColor(d))
+          .attr('stroke', d => d === mainshock ? 'white' : 'none')
+          .attr('stroke-width', d => d === mainshock ? 2 : 0)
+          .attr('opacity', 0)
+          .on('mouseover', (event, d) => {
+            showTooltip(event, {
+              title: `M ${d.mag.toFixed(1)}`,
+              detail:
+                `${d.place}<br>` +
+                `${d.time.toLocaleDateString()} ` +
+                `(day ${d.daysFromMainshock.toFixed(1)} relative to mainshock)`
+            });
+          })
+          .on('mouseout', hideTooltip)
+          .transition()
+          .duration(400)
+          .attr('opacity', d => d === mainshock ? 1 : 0.75);
+
+        dots
+          .transition()
+          .duration(400)
+          .attr('cx', d => x(d.daysFromMainshock))
+          .attr('cy', d => y(d.mag))
+          .attr('opacity', d => d === mainshock ? 1 : 0.75);
+
+        dots.exit()
+          .transition()
+          .duration(200)
+          .attr('opacity', 0)
+          .remove();
+
+        // keep mainshock on top
+        dotsGroup.selectAll('circle').filter(d => d === mainshock).raise();
+      }
+
+      // Button handlers
+      d3.selectAll('#section-sequence .control-btn').on('click', function() {
+        d3.selectAll('#section-sequence .control-btn').classed('active', false);
+        d3.select(this).classed('active', true);
+        const layer = this.dataset.seq;
+        updateSequence(layer);
+      });
+
+      // Initial draw
+      updateSequence('all');
+
+      // Data-driven summary for the stat-highlight
+      const largeAll = data.filter(d => d.mag >= 4.0);
+      const beforeLarge = largeAll.filter(d => d.seqPhase === 'before').length;
+      const weekLarge = largeAll.filter(d => d.seqPhase === 'week').length;
+      const lateLarge = largeAll.filter(d => d.seqPhase === 'late').length;
+      const timesMore = beforeLarge > 0 ? (weekLarge / beforeLarge) : null;
+
+      let ratioFragment = '';
+      if (timesMore && isFinite(timesMore) && timesMore > 0) {
+        ratioFragment =
+          `, about <strong>${timesMore.toFixed(1)}×</strong> as many as in the entire period before the mainshock`;
+      }
+
+      const statEl = document.getElementById('sequence-stat');
+      statEl.innerHTML = `
+        In this sequence, only <strong>${largeAll.length.toLocaleString()}</strong> earthquakes reached
+        magnitude 4.0 or higher. Just <strong>${beforeLarge}</strong> of them occurred before the mainshock,
+        while <strong>${weekLarge}</strong> struck in the <strong>first 7 days after</strong>${ratioFragment}.
+        After that first week, only <strong>${lateLarge}</strong> additional M≥4.0 events appear, and the
+        sequence settles back into a sea of much smaller M2–3 tremors.
+      `;
+
+      document.getElementById('loading-sequence').style.display = 'none';
+      container.style('display', 'block');
+    }
+
   </script>
 </body>
 </html>
