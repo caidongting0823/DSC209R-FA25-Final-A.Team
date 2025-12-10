@@ -496,8 +496,16 @@
           <div class="stat-label">Damage Cost</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" id="total-events">30,079</div>
+          <div class="stat-value" id="total-events">—</div>
           <div class="stat-label">Seismic Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="hero-aftershocks">—</div>
+          <div class="stat-label">Quakes in First 30 Days</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="hero-span">—</div>
+          <div class="stat-label">Time Span Covered</div>
         </div>
       </div>
 
@@ -800,7 +808,6 @@
     d3.csv('../dataset/us_loma_prieta_1988_1990_allmags.csv').then(data => {
       // Parse and filter data
       earthquakeData = data
-      earthquakeData = data
         .filter(d => d.type === 'earthquake')
         .map(d => {
           const time  = new Date(d.time);
@@ -834,8 +841,29 @@
         })
         .filter(d => !isNaN(d.mag) && !isNaN(d.depth));
 
-      // Update total count
-      document.getElementById('total-events').textContent = earthquakeData.length.toLocaleString();
+      // --- Hero stats from data ---
+
+      const totalEvents = earthquakeData.length;
+      const totalEl = document.getElementById('total-events');
+      if (totalEl) {
+        totalEl.textContent = totalEvents.toLocaleString();
+      }
+
+      // Quakes in first 30 days after mainshock
+      const first30Count = earthquakeData.filter(d => d.phase === 'after30').length;
+      const afterEl = document.getElementById('hero-aftershocks');
+      if (afterEl) {
+        afterEl.textContent = first30Count.toLocaleString();
+      }
+
+      // Time span covered (in years)
+      const firstDate = d3.min(earthquakeData, d => d.time);
+      const lastDate  = d3.max(earthquakeData, d => d.time);
+      const spanYears = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 365.25);
+      const spanEl = document.getElementById('hero-span');
+      if (spanEl) {
+        spanEl.textContent = spanYears.toFixed(1) + ' yrs';
+      }
 
       // Initialize visualizations
       initTimeline();
@@ -844,6 +872,8 @@
       initSpatial();
       initEnergy();
       initSequence();
+    }).catch(err => {
+      console.error('Error loading CSV:', err);
     });
 
     // Tooltip functions
@@ -942,21 +972,18 @@
       const startDate = timelineData[0].date;
       const endDate   = timelineData[timelineData.length - 1].date;
 
-      // Average daily counts before vs. after mainshock
       const beforePeriod = timelineData.filter(d => d.date < mainshockDate);
       const afterPeriod  = timelineData.filter(d => d.date >= mainshockDate);
 
       const meanBefore = d3.mean(beforePeriod, d => d.count) || 0;
       const meanAfter  = d3.mean(afterPeriod,  d => d.count) || 0;
 
-      // Peak day (for y-scale)
       const peak = timelineData.reduce(
         (a, b) => (b.count > a.count ? b : a),
         timelineData[0]
       );
       const maxDaily = peak.count;
 
-      // 7-day rolling average
       const windowSize = 7;
       const rollingData = timelineData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
@@ -967,14 +994,14 @@
         };
       });
 
-      // Monthly aggregates for interaction
+      // Monthly aggregates for hover bands
       const monthFormat = d3.timeMonth;
       const monthlyData = Array.from(
         d3.rollup(
           timelineData,
           v => {
             const total = d3.sum(v, d => d.count);
-            const days = v.length;
+            const days  = v.length;
             return { total, days, avg: total / days };
           },
           d => monthFormat(d.date)
@@ -982,8 +1009,13 @@
         ([date, stats]) => ({ date, ...stats })
       ).sort((a, b) => a.date - b.date);
 
-      // ---------- Rendering with zoom toggle ----------
-      const zoomMax = 200;   // zoomed-in y max
+      // Time scale (unchanged between zoom modes)
+      const x = d3.scaleTime()
+        .domain([startDate, endDate])
+        .range([margin.left, width - margin.right]);
+
+      // ---------- Zoom toggle ----------
+      const zoomMax = 200;   // y max for "zoom in for detail"
       let zoomed = false;    // DEFAULT: full spike view
 
       function setButtonLabel() {
@@ -1003,87 +1035,43 @@
           .nice()
           .range([height - margin.bottom, margin.top]);
 
-        const x = d3.scaleTime()
-          .domain(d3.extent(timelineData, d => d.date))
-          .range([margin.left, width - margin.right]);
-
-        // Grid
-        svg.append('g')
-          .attr('class', 'grid')
-          .attr('transform', `translate(0,${height - margin.bottom})`)
-          .call(d3.axisBottom(x)
-            .tickSize(-(height - margin.top - margin.bottom))
-            .tickFormat(''));
+        const beforeY = y(meanBefore);
+        const afterY  = y(meanAfter);
 
         // Axes
         svg.append('g')
           .attr('class', 'axis')
           .attr('transform', `translate(0,${height - margin.bottom})`)
-          .call(d3.axisBottom(x).ticks(10));
+          .call(d3.axisBottom(x).ticks(6));
 
         svg.append('g')
           .attr('class', 'axis')
           .attr('transform', `translate(${margin.left},0)`)
-          .call(d3.axisLeft(y));
+          .call(d3.axisLeft(y).ticks(5));
 
-        // Y-axis label
+        // Axis labels
         svg.append('text')
-          .attr('transform', 'rotate(-90)')
-          .attr('x', -(height / 2))
-          .attr('y', 15)
+          .attr('x', width / 2)
+          .attr('y', height - 20)
           .attr('fill', 'var(--muted)')
           .attr('font-size', '12px')
           .style('text-anchor', 'middle')
-          .text('Earthquakes per Day');
-
-        // Shading under averages
-        const beforeY = y(Math.min(meanBefore, yMax));
-        const afterY  = y(Math.min(meanAfter,  yMax));
-
-        svg.append('rect')
-          .attr('x', x(startDate))
-          .attr('y', beforeY)
-          .attr('width', x(mainshockDate) - x(startDate))
-          .attr('height', height - margin.bottom - beforeY)
-          .attr('fill', 'var(--accent)')
-          .attr('opacity', 0.12);
-
-        svg.append('rect')
-          .attr('x', x(mainshockDate))
-          .attr('y', afterY)
-          .attr('width', x(endDate) - x(mainshockDate))
-          .attr('height', height - margin.bottom - afterY)
-          .attr('fill', 'var(--accent2)')
-          .attr('opacity', 0.12);
-
-        // Avg labels centered within each section
-        const avgLabelY = margin.top + 14;
-        const beforeMidX = (x(startDate) + x(mainshockDate)) / 2;
-        const afterMidX  = (x(mainshockDate) + x(endDate)) / 2;
+          .text('June 1988 → June 1990');
 
         svg.append('text')
-          .attr('x', beforeMidX)
-          .attr('y', avgLabelY)
-          .attr('fill', 'var(--accent2)')
-          .attr('font-size', '11px')
-          .attr('font-weight', '500')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -(height / 2))
+          .attr('y', 20)
+          .attr('fill', 'var(--muted)')
+          .attr('font-size', '12px')
           .style('text-anchor', 'middle')
-          .text(`Avg/day before mainshock ≈ ${meanBefore.toFixed(1)}`);
+          .text('Earthquakes per day');
 
-        svg.append('text')
-          .attr('x', afterMidX)
-          .attr('y', avgLabelY)
-          .attr('fill', 'var(--accent2)')
-          .attr('font-size', '11px')
-          .attr('font-weight', '500')
-          .style('text-anchor', 'middle')
-          .text(`Avg/day after mainshock ≈ ${meanAfter.toFixed(1)}`);
-
-        // Lines
-        const clampValues = zoomed; // clamp only in zoomed view
+        // Lines: in zoom mode, *break* where values exceed yMax
         const dailyLine = d3.line()
+          .defined(d => !(zoomed && d.count > yMax))
           .x(d => x(d.date))
-          .y(d => y(clampValues ? Math.min(d.count, yMax) : d.count))
+          .y(d => y(d.count))
           .curve(d3.curveMonotoneX);
 
         svg.append('path')
@@ -1094,8 +1082,9 @@
           .attr('d', dailyLine);
 
         const avgLine = d3.line()
+          .defined(d => !(zoomed && d.avg > yMax))
           .x(d => x(d.date))
-          .y(d => y(clampValues ? Math.min(d.avg, yMax) : d.avg))
+          .y(d => y(d.avg))
           .curve(d3.curveMonotoneX);
 
         svg.append('path')
@@ -1105,7 +1094,7 @@
           .attr('stroke-width', 2.5)
           .attr('d', avgLine);
 
-        // Horizontal average lines
+        // Horizontal average lines (before vs after)
         svg.append('line')
           .attr('x1', x(startDate))
           .attr('x2', x(mainshockDate))
@@ -1126,7 +1115,40 @@
           .attr('stroke-dasharray', '4,4')
           .attr('opacity', 0.9);
 
-        // === Interactive monthly bands (hover for monthly totals) ===
+        // Labels for the average lines (centered in each period)
+        const beforeMidX = (x(startDate) + x(mainshockDate)) / 2;
+        const afterMidX  = (x(mainshockDate) + x(endDate)) / 2;
+
+        svg.append('text')
+          .attr('x', beforeMidX)
+          .attr('y', beforeY - 8)
+          .attr('fill', 'var(--accent)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '500')
+          .style('text-anchor', 'middle')
+          .text(`Avg/day before mainshock ≈ ${meanBefore.toFixed(1)}`);
+
+        svg.append('text')
+          .attr('x', afterMidX)
+          .attr('y', afterY - 8)
+          .attr('fill', 'var(--accent2)')
+          .attr('font-size', '11px')
+          .attr('font-weight', '500')
+          .style('text-anchor', 'middle')
+          .text(`Avg/day after mainshock ≈ ${meanAfter.toFixed(1)}`);
+
+        // In zoomed view, explain that the true peak lies off the top
+        if (zoomed) {
+          svg.append('text')
+            .attr('x', width - margin.right)
+            .attr('y', margin.top + 14)
+            .attr('fill', 'var(--muted)')
+            .attr('font-size', '10px')
+            .attr('text-anchor', 'end')
+            .text(`Peak day (~${peak.count.toLocaleString()} quakes) is above this zoomed view`);
+        }
+
+        // Hoverable monthly bands for totals
         const monthOverlay = svg.append('g').attr('class', 'month-overlay');
 
         monthOverlay.selectAll('rect')
@@ -1205,6 +1227,7 @@
       document.getElementById('loading-timeline').style.display = 'none';
       container.style('display', 'block');
     }
+
 
     // 2. Magnitude Visualization
     function initMagnitudeViz() {
@@ -1606,7 +1629,7 @@
         .attr('x', x(meanDepth))
         .attr('y', margin.top - 12)
         .attr('fill', 'var(--accent2)')
-        .attr('font-size', '11px')
+        .attr('font-size', '12px')
         .attr('font-weight', '500')
         .style('text-anchor', meanDepth > maxDepth / 2 ? 'end' : 'start')
         .text(`Avg depth ≈ ${meanDepth.toFixed(1)} km (${meanDepthMi.toFixed(1)} mi)`);
