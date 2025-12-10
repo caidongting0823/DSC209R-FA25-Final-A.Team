@@ -373,6 +373,33 @@
       font-family: 'Fraunces', Georgia, serif;
     }
 
+    .inline-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin: -8px auto 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      justify-content: center;
+      line-height: 1.5;
+    }
+
+    .inline-note-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(178,189,223,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+
     /* CTA Section */
     .cta-section {
       text-align: center;
@@ -1386,7 +1413,7 @@
       const container = d3.select('#comparison-viz');
       const width = 800;
       const height = 400;
-      const margin = { top: 60, right: 40, bottom: 60, left: 70 }; // extra top room for labels
+      const margin = { top: 60, right: 40, bottom: 60, left: 80 }; // extra top room for labels
 
       const svg = container.append('svg')
         .attr('width', width)
@@ -1830,6 +1857,7 @@
       const totalNoMain = cumNoMain;
       const mainshockEnergyKt = totalAll - totalNoMain;
       const mainshockShare = (mainshockEnergyKt / totalAll) * 100;
+      const othersShare = 100 - mainshockShare;
 
       const x = d3.scaleTime()
         .domain(d3.extent(energyData, d => d.time))
@@ -1867,6 +1895,55 @@
         .attr('font-size', '12px')
         .style('text-anchor', 'middle')
         .text('June 1988 → June 1990');
+
+      // Small info icon + label explaining how energy is computed (top-left)
+      const infoGroup = svg.append('g')
+        .attr('class', 'energy-info')
+        .attr('transform', `translate(${margin.left}, ${margin.top - 26})`)
+        .style('cursor', 'help')
+        .on('mouseover', (event) => {
+          showTooltip(event, {
+            title: 'Energy estimate',
+            detail:
+              'We approximate energy from magnitude using the Gutenberg–Richter ' +
+              'relation <em>E = 10<sup>1.5M + 4.8</sup></em> joules, then convert to ' +
+              'kilotons of TNT assuming <strong>4.184×10<sup>12</sup> J</strong> per kiloton.'
+          });
+        })
+        .on('mousemove', (event) => {
+          d3.select('#tooltip')
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top',  (event.pageY - 15) + 'px');
+        })
+        .on('mouseout', hideTooltip);
+
+      // circular "i" icon
+      infoGroup.append('circle')
+        .attr('cx', 0)
+        .attr('cy', 0)
+        .attr('r', 9)
+        .attr('fill', 'none')
+        .attr('stroke', 'rgba(178,189,223,0.9)')
+        .attr('stroke-width', 1);
+
+      infoGroup.append('text')
+        .attr('x', 0)
+        .attr('y', 3)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '10px')
+        .attr('font-weight', '600')
+        .attr('text-anchor', 'middle')
+        .text('i');
+
+      // label text to the right of the icon
+      infoGroup.append('text')
+        .attr('x', 14)
+        .attr('y', 3)
+        .attr('fill', 'var(--muted)')
+        .attr('font-size', '11px')
+        .text('How was energy calculated?');
+
+
 
       // Gradient for total energy area
       const defs = svg.append('defs');
@@ -1947,7 +2024,8 @@
           .attr('stroke', 'white')
           .attr('stroke-width', 2);
 
-        const shareLabel = mainshockShare.toFixed(0);
+        const shareLabel  = mainshockShare.toFixed(0);
+        const energyLabel = Math.round(mainshockEnergyKt).toLocaleString();
 
         const label = svg.append('text')
           .attr('x', mx + 10)
@@ -1962,23 +2040,51 @@
         label.append('tspan')
           .attr('x', mx + 10)
           .attr('dy', '1.2em')
-          .text(`≈ ${shareLabel}% of total energy`);
+          .text(`≈ ${shareLabel}% of total (~${energyLabel} kt)`);
       }
 
-      // Simple legend in the top-left
+      // Highlight how little energy comes from all other quakes
+      const lastPoint = energyData[energyData.length - 1];
+      const endX = x(lastPoint.time);
+
+      // Small marker on the dashed "no mainshock" curve
+      svg.append('circle')
+        .attr('cx', endX)
+        .attr('cy', y(totalNoMain))
+        .attr('r', 3)
+        .attr('fill', 'var(--accent2)');
+
+      svg.append('text')
+        .attr('x', endX - 8)
+        .attr('y', y(totalNoMain) - 10)
+        .attr('fill', 'var(--accent2)')
+        .attr('font-size', '10px')
+        .attr('font-weight', '500')
+        .style('text-anchor', 'end')
+        .text(`All other quakes (~${othersShare.toFixed(1)}%)`);
+
+      // Legend, shifted right so it doesn't overlap the info icon
       const legend = svg.append('g')
-        .attr('transform', `translate(${margin.left}, ${margin.top - 25})`);
+        .attr('transform', `translate(${margin.left + 220}, ${margin.top - 25})`);
 
       const legendItems = [
-        { color: 'var(--accent)',  label: 'All earthquakes (cumulative)' },
-        { color: 'var(--accent2)', label: 'All except mainshock' }
+        {
+          color: 'var(--accent)',
+          label: 'All earthquakes (cumulative)',
+          detail: '≈ 100% of energy'
+        },
+        {
+          color: 'var(--accent2)',
+          label: 'All except mainshock',
+          detail: `≈ ${othersShare.toFixed(1)}% of energy`
+        }
       ];
 
       const legendRows = legend.selectAll('g')
         .data(legendItems)
         .enter()
         .append('g')
-        .attr('transform', (d, i) => `translate(${i * 220}, 0)`);
+        .attr('transform', (d, i) => `translate(${i * 260}, 0)`);
 
       legendRows.append('line')
         .attr('x1', 0)
@@ -1989,12 +2095,20 @@
         .attr('stroke', d => d.color)
         .attr('stroke-dasharray', (d, i) => i === 1 ? '4,4' : null);
 
-      legendRows.append('text')
+      const legendText = legendRows.append('text')
         .attr('x', 30)
         .attr('y', 4)
         .attr('fill', 'var(--muted)')
-        .attr('font-size', '11px')
+        .attr('font-size', '11px');
+
+      legendText.append('tspan')
         .text(d => d.label);
+
+      legendText.append('tspan')
+        .attr('x', 30)
+        .attr('dy', '1.2em')
+        .attr('font-size', '10px')
+        .text(d => d.detail);
 
       document.getElementById('loading-energy').style.display = 'none';
       container.style('display', 'block');
