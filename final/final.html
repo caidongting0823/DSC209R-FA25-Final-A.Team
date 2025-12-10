@@ -112,15 +112,25 @@
       font-size: 1rem;
       color: var(--muted);
       max-width: 580px;
-      margin: 0 0 0.9rem;
+      margin: 0 0 0.6rem;
       text-shadow: 0 8px 18px rgba(0,0,0,0.85);
+    }
+
+    /* New: hook line for rubric */
+    .hook {
+      font-size: 0.95rem;
+      color: var(--accent2);
+      margin: 0 0 1rem;
+      font-style: italic;
+      text-shadow: 0 8px 18px rgba(0,0,0,0.9);
+      max-width: 620px;
     }
 
     .lede {
       font-size: 0.96rem;
       color: rgba(241,243,255,0.9);
       max-width: 600px;
-      margin: 0 0 1.6rem;
+      margin: 0 0 1.1rem;
       text-shadow: 0 8px 18px rgba(0,0,0,0.9);
       line-height: 1.6;
     }
@@ -128,6 +138,20 @@
     .lede strong {
       color: var(--accent2);
       font-weight: 600;
+    }
+
+    /* New: short “what you can do here” list */
+    .hero-list {
+      margin: 0 0 1.6rem 1.2rem;
+      padding: 0;
+      list-style: disc;
+      color: var(--muted);
+      font-size: 0.9rem;
+      max-width: 640px;
+    }
+
+    .hero-list li + li {
+      margin-top: 0.2rem;
     }
 
     .mode-row {
@@ -219,9 +243,20 @@
       background: var(--accent2);
     }
 
+    .meta a {
+      color: var(--accent2);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+
     @media (max-width: 720px) {
       .hero-inner {
         padding: 24px 18px 36px;
+      }
+
+      .hero-list {
+        margin-left: 1rem;
       }
     }
   </style>
@@ -240,15 +275,23 @@
       <p class="subtitle">
         A two-part data story about how one evening in October 1989 reshaped the Bay Area.
       </p>
+      <p class="hook">
+        What does a 15-second earthquake look like when you zoom out to two years of seismic activity?
+      </p>
       <p class="lede">
         Start with an <strong>interactive data overview</strong> of tens of thousands of earthquakes,
         then step into <strong>Story Mode</strong> to follow October 17, 1989 through maps, timelines,
         and historical media.
       </p>
 
+      <ul class="hero-list">
+        <li><strong>Intro · Data story:</strong> See nearly 30,000 USGS events from 1988–1990 as timelines, maps, depth and energy plots.</li>
+        <li><strong>Story Mode:</strong> Walk through the day of the quake itself with an interactive timeline and curated archival media.</li>
+      </ul>
+
       <div class="mode-row">
         <div class="mode-pill">
-          <span class="tag">Step 1</span>Intro · Data story & context
+          <span class="tag">Step 1</span>Intro · Data story &amp; context
         </div>
         <div class="mode-pill">
           <span class="tag">Step 2</span>Story Mode · Interactive timeline
@@ -267,8 +310,17 @@
       </div>
 
       <div class="meta">
-        <span>Data: USGS, 1988–1990 events near Loma Prieta.</span>
-        <span>Flow: Homepage → Intro → Story Mode.</span>
+        <span>
+          <span class="meta-dot"></span>
+          Data: USGS FDSN events, June 1988–June 1990 near Loma Prieta.
+        </span>
+        <span>
+          <span class="meta-dot"></span>
+          Demo video:
+          <a href="https://youtu.be/hBJRCoZSBcA" target="_blank" rel="noopener noreferrer">
+            2-minute overview
+          </a>
+        </span>
       </div>
     </div>
   </section>
